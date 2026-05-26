@@ -32,6 +32,9 @@ app.use('/api/kewps6', kewps6Router);
 app.use('/api/indent_sessions', indentSessionsRoutes);
 app.use('/api/indent_items', indentItemsRoutes);
 
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
