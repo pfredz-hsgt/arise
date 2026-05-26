@@ -64,7 +64,7 @@ router.post('/reset-password', async (req, res) => {
 
         // Generate 6 character random password
         // const tempPassword = Math.random().toString(36).slice(-6);
-        const tempPassword = "[F@rmasi.1234]"; //temporary only
+        const tempPassword = "F@rmasi.1234"; //temporary only
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
         await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hashedPassword, email]);
