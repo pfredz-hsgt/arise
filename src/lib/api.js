@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3005/api';
+const API_BASE_URL = import.meta.env.PROD ? '/arise/api' : 'http://localhost:3005/api';
 
 const request = async (endpoint, options = {}) => {
     const token = localStorage.getItem('token');
