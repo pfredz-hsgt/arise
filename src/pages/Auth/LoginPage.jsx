@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Layout, Card, Form, Input, Button, Typography, message, Modal } from 'antd';
 import { UserOutlined, MedicineBoxOutlined, MailOutlined } from '@ant-design/icons';
+import logo from '../../img/logo.svg';
 
 const { Title, Text } = Typography;
 
@@ -103,7 +104,7 @@ const LoginPage = () => {
 
             <Card className="glass-card" bordered={false}>
                 <div style={{ textAlign: 'center', marginBottom: 36 }}>
-                    <img src="/vite.svg" alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '120px', marginBottom: '0px' }} />
+                    <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '120px', marginBottom: '0px' }} />
                     <Title level={4} style={{
                         color: 'white',
                         margin: 0,

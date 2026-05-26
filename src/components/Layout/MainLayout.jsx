@@ -16,6 +16,7 @@ import {
     LockOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import logo from '../../img/logo.svg';
 
 const { Header, Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -154,7 +155,7 @@ const MainLayout = () => {
                 className="desktop-sider"
             >
                 <div style={{ padding: '24px 16px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <img src="/vite.svg" alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
+                    <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
                     <Title level={4} style={{
                         color: 'white',
                         margin: 0,
@@ -203,7 +204,7 @@ const MainLayout = () => {
                 width={200}
             >
                 <div style={{ padding: '24px 16px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <img src="/vite.svg" alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
+                    <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
                     <Typography.Text style={{
                         color: 'rgba(255,255,255,0.5)',
                         fontSize: '10px',
