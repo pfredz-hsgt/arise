@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import pool from '../db.js';
 
 const router = express.Router();
@@ -52,11 +53,58 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Password reset
+router.post('/reset-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Generate 6 character random password
+        // const tempPassword = Math.random().toString(36).slice(-6);
+        const tempPassword = "[F@rmasi.1234]"; //temporary only
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+        await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hashedPassword, email]);
+
+        // Configure nodemailer
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'localhost',
+            port: process.env.SMTP_PORT || 25,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: process.env.SMTP_USER ? {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            } : undefined,
+        });
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"ARISE System" <noreply@arise.local>',
+            to: email,
+            subject: 'Your Password Has Been Reset',
+            text: `Your password has been reset. Your temporary password is: ${tempPassword}\n\nPlease change your password after logging in.`,
+            html: `<p>Your password has been reset.</p><p>Your temporary password is: <strong>${tempPassword}</strong></p><p>Please change your password after logging in.</p>`
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            res.json({ message: 'Temporary password sent to email' });
+        } catch (emailError) {
+            console.error('Error sending email:', emailError);
+            res.status(500).json({ error: 'Password reset successful, but failed to send email. Please check SMTP configuration.' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Middleware to verify JWT
 export const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (token == null) return res.sendStatus(401);
 
     jwt.verify(token, JWT_SECRET, (err, user) => {

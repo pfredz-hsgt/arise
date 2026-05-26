@@ -47,12 +47,18 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const resetPassword = async (email) => {
+        const data = await api.post('/auth/reset-password', { email });
+        return data;
+    };
+
     const value = {
         user,
         profile: user, // For backwards compatibility with existing components
         loading,
         login,
         signOut,
+        resetPassword,
         isIssuer: user?.role === 'Issuer',
         isIndenter: user?.role === 'Indenter'
     };

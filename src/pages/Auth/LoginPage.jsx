@@ -13,7 +13,7 @@ const LoginPage = () => {
     const [resetLoading, setResetLoading] = useState(false);
     const [resetForm] = Form.useForm();
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { login, resetPassword } = useAuth();
 
     const onFinish = async (values) => {
         setLoading(true);
@@ -31,8 +31,8 @@ const LoginPage = () => {
     const handleResetPassword = async (values) => {
         setResetLoading(true);
         try {
-            // Password reset to be implemented via backend
-            message.warning('Password reset is not implemented in the new system yet.');
+            await resetPassword(values.resetEmail);
+            message.success('A temporary password has been sent to your email.');
             setResetModalVisible(false);
             resetForm.resetFields();
         } catch (error) {
