@@ -1,0 +1,214 @@
+import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Layout, Card, Form, Input, Button, Typography, message, Modal } from 'antd';
+import { UserOutlined, MedicineBoxOutlined, MailOutlined } from '@ant-design/icons';
+
+const { Title, Text } = Typography;
+
+const LoginPage = () => {
+    const [loading, setLoading] = useState(false);
+    const [resetModalVisible, setResetModalVisible] = useState(false);
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetForm] = Form.useForm();
+    const navigate = useNavigate();
+    const { login } = useAuth();
+
+    const onFinish = async (values) => {
+        setLoading(true);
+        try {
+            await login(values.email, values.password);
+
+            navigate('/');
+        } catch (error) {
+            message.error(error.message || 'Failed to sign in');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (values) => {
+        setResetLoading(true);
+        try {
+            // Password reset to be implemented via backend
+            message.warning('Password reset is not implemented in the new system yet.');
+            setResetModalVisible(false);
+            resetForm.resetFields();
+        } catch (error) {
+            message.error(error.message || 'Failed to send recovery email');
+        } finally {
+            setResetLoading(false);
+        }
+    };
+
+    return (
+        <Layout className="login-bg">
+            <style>{`
+                .login-bg {
+                    background-color: #f0f2f5;
+                    background-image: 
+                        radial-gradient(at 0% 0%, rgba(24, 144, 255, 0.15) 0px, transparent 50%),
+                        radial-gradient(at 100% 0%, rgba(0, 209, 178, 0.15) 0px, transparent 50%),
+                        radial-gradient(at 100% 100%, rgba(24, 144, 255, 0.15) 0px, transparent 50%),
+                        radial-gradient(at 0% 100%, rgba(0, 209, 178, 0.15) 0px, transparent 50%);
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .glass-card {
+                    width: 100%;
+                    max-width: 420px;
+                    background: rgba(255, 255, 255, 0.44) !important;
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
+                    border-radius: 24px !important;
+                }
+                .glass-card .ant-card-body {
+                    padding: 40px 32px !important;
+                }
+                .login-input .ant-input-affix-wrapper, .login-input.ant-input {
+                    border-radius: 12px;
+                    padding: 12px 16px;
+                    background: rgba(255, 255, 255, 0.8);
+                    transition: all 0.3s ease;
+                }
+                .login-btn {
+                    border-radius: 12px;
+                    height: 50px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    margin-top: 8px;
+                    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+                    border: none;
+                    box-shadow: 0 4px 14px 0 rgba(24, 144, 255, 0.39);
+                    transition: all 0.3s ease;
+                }
+                .login-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(24, 144, 255, 0.45);
+                    background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+                }
+                .forgot-btn {
+                    color: #595959;
+                    font-weight: 500;
+                    transition: color 0.3s ease;
+                }
+                .forgot-btn:hover {
+                    color: #1890ff;
+                }
+            `}</style>
+
+            <Card className="glass-card" bordered={false}>
+                <div style={{ textAlign: 'center', marginBottom: 36 }}>
+                    <img src="/vite.svg" alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '120px', marginBottom: '0px' }} />
+                    <Title level={4} style={{
+                        color: 'white',
+                        margin: 0,
+                        letterSpacing: '6px',
+                        fontWeight: 450,
+                        background: 'linear-gradient(to bottom, #88e6ecff 0%, #439facff 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textTransform: 'uppercase',
+                        fontSize: '46px',
+                        fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                    }}>
+                        ARISE
+                    </Title>
+                    <Text type="secondary" style={{
+                        fontSize: '13px',
+                        letterSpacing: '1.2px',
+                        textTransform: 'uppercase',
+                        display: 'block',
+                        marginTop: '0px',
+                        fontWeight: 600,
+                        color: '#8c8c8c'
+                    }}>
+                        Farmasi Pesakit Luar<br />Hospital Segamat
+                    </Text>
+                </div>
+
+                <Form
+                    name="login"
+                    onFinish={onFinish}
+                    layout="vertical"
+                    size="large"
+                >
+                    <Form.Item
+                        name="email"
+                        rules={[{ required: true, message: 'Please input your Email!' }]}
+                    >
+                        <Input
+                            className="login-input"
+                            prefix={<UserOutlined style={{ color: '#bfbfbf', marginRight: '8px' }} />}
+                            placeholder="Email Address"
+                        />
+                    </Form.Item>
+                    <Form.Item
+                        name="password"
+                        rules={[{ required: true, message: 'Please input your Password!' }]}
+                    >
+                        <Input.Password
+                            className="login-input"
+                            prefix={<MedicineBoxOutlined style={{ color: '#bfbfbf', marginRight: '8px' }} />}
+                            placeholder="Password"
+                        />
+                    </Form.Item>
+
+                    <Form.Item style={{ marginBottom: 0 }}>
+                        <Button type="primary" htmlType="submit" loading={loading} block className="login-btn">
+                            Sign In
+                        </Button>
+                        <div style={{ textAlign: 'center', marginTop: 20 }}>
+                            <Button type="link" onClick={() => setResetModalVisible(true)} className="forgot-btn" style={{ padding: 0 }}>
+                                Forgot Password?
+                            </Button>
+                        </div>
+                    </Form.Item>
+                </Form>
+            </Card>
+
+            <Modal
+                title="Reset Password"
+                open={resetModalVisible}
+                onCancel={() => {
+                    setResetModalVisible(false);
+                    resetForm.resetFields();
+                }}
+                footer={null}
+                destroyOnClose
+            >
+                <div style={{ marginBottom: 24 }}>
+                    <Text type="secondary">
+                        Enter your email address and we will send you a link to reset your password.
+                    </Text>
+                </div>
+                <Form
+                    form={resetForm}
+                    onFinish={handleResetPassword}
+                    layout="vertical"
+                >
+                    <Form.Item
+                        name="resetEmail"
+                        rules={[
+                            { required: true, message: 'Please input your email!' },
+                            { type: 'email', message: 'Please enter a valid email!' }
+                        ]}
+                    >
+                        <Input prefix={<MailOutlined style={{ color: 'rgba(0,0,0,.25)' }} />} placeholder="Email address" size="large" />
+                    </Form.Item>
+                    <Form.Item style={{ marginBottom: 0 }}>
+                        <Button type="primary" htmlType="submit" loading={resetLoading} block size="large">
+                            Send Reset Link
+                        </Button>
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </Layout>
+    );
+};
+
+export default LoginPage;
