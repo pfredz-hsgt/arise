@@ -1,7 +1,7 @@
 {
-  "name": "pims-backend",
+  "name": "arise-backend",
   "version": "1.0.0",
-  "description": "Node/Express backend for PIMS",
+  "description": "Node/Express backend for ARISE",
   "main": "server.js",
   "type": "module",
   "scripts": {
