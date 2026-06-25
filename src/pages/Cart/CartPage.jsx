@@ -224,7 +224,7 @@ const CartPage = () => {
                 styles: { minCellHeight: 35, halign: 'left', valign: 'top', fillColor: [255, 255, 255], fontStyle: 'normal', fontSize: 9 }
             },
             {
-                content: `Pemohon/ Wakil:\n\n\n\n..........................\n(Tandatangan)\n\nNama:\nJawatan:\nTarikh:`,
+                content: `Pemohon/ Wakil:\n\n\n..........................\n(Tandatangan)\n\nNama:\nJawatan:\nTarikh:`,
                 colSpan: 2,
                 styles: { minCellHeight: 35, halign: 'left', valign: 'top', fillColor: [255, 255, 255], fontStyle: 'normal', fontSize: 9 }
             }
