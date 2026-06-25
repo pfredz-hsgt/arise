@@ -26,7 +26,7 @@ const MainLayout = () => {
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
-    const { user, profile, isIssuer, signOut } = useAuth();
+    const { user, profile, isIssuer, signOut, changePassword } = useAuth();
 
     const [passwordModalVisible, setPasswordModalVisible] = useState(false);
     const [passwordForm] = Form.useForm();
@@ -40,7 +40,8 @@ const MainLayout = () => {
     const handleChangePassword = async (values) => {
         setChangingPassword(true);
         try {
-            message.warning('Password update not yet implemented in custom backend');
+            await changePassword(values.newPassword);
+            message.success('Password updated successfully');
             setPasswordModalVisible(false);
             passwordForm.resetFields();
         } catch (error) {

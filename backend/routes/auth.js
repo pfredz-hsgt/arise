@@ -114,6 +114,18 @@ export const authenticateToken = (req, res, next) => {
     });
 };
 
+// Change password
+router.post('/change-password', authenticateToken, async (req, res) => {
+    const { newPassword } = req.body;
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, req.user.id]);
+        res.json({ success: true, message: 'Password updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Get current user profile
 router.get('/me', authenticateToken, async (req, res) => {
     try {

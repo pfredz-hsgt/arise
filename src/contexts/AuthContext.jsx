@@ -52,6 +52,11 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
+    const changePassword = async (newPassword) => {
+        const data = await api.post('/auth/change-password', { newPassword });
+        return data;
+    };
+
     const value = {
         user,
         profile: user, // For backwards compatibility with existing components
@@ -59,6 +64,7 @@ export const AuthProvider = ({ children }) => {
         login,
         signOut,
         resetPassword,
+        changePassword,
         isIssuer: user?.role === 'Issuer',
         isIndenter: user?.role === 'Indenter'
     };
