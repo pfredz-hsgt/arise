@@ -768,21 +768,35 @@ const CartPage = () => {
                                         style={{ marginLeft: 8, backgroundColor: '#333', color: 'white', borderColor: '#555' }} 
                                         onClick={() => {
                                             if (navigator.clipboard && window.isSecureContext) {
-                                                navigator.clipboard.writeText(indentNo);
-                                                message.success('Indent Number copied!');
+                                                navigator.clipboard.writeText(indentNo).then(() => {
+                                                    message.success('Indent Number copied!');
+                                                }).catch(() => {
+                                                    message.error('Failed to copy. Please copy manually.');
+                                                });
                                             } else {
                                                 const textArea = document.createElement("textarea");
                                                 textArea.value = indentNo;
-                                                textArea.style.position = "absolute";
-                                                textArea.style.left = "-999999px";
+                                                
+                                                // Prevent scrolling and ensure it is focusable in the viewport
+                                                textArea.style.top = "0";
+                                                textArea.style.left = "0";
+                                                textArea.style.position = "fixed";
+                                                textArea.style.opacity = "0";
+                                                
                                                 document.body.appendChild(textArea);
+                                                textArea.focus();
                                                 textArea.select();
+                                                
                                                 try {
-                                                    document.execCommand('copy');
-                                                    message.success('Indent Number copied!');
+                                                    const successful = document.execCommand('copy');
+                                                    if (successful) {
+                                                        message.success('Indent Number copied!');
+                                                    } else {
+                                                        message.error('Browser blocked copying. Please highlight and copy manually.');
+                                                    }
                                                 } catch (error) {
                                                     console.error('Fallback copy failed', error);
-                                                    message.error('Failed to copy.');
+                                                    message.error('Failed to copy. Please copy manually.');
                                                 }
                                                 document.body.removeChild(textArea);
                                             }
