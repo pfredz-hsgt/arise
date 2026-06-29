@@ -14,12 +14,12 @@ async function runPhisIndent(items, options = {}) {
     const page = await browser.newPage();
 
     try {
-        logCallback("Navigating to PhIS login...");
+        logCallback("Opening PhIS...");
         await page.goto('http://10.77.232.70:8080/iphis/login.zul');
 
-        logCallback("Waiting for login page to load...");
+        logCallback("Waiting for login...");
         if (options.username && options.password) {
-            logCallback("Entering provided credentials...");
+            logCallback("Entering credentials...");
             await page.fill('input[name="j_username"]', options.username);
             await page.fill('input[name="j_password"]', options.password);
         }
@@ -45,15 +45,15 @@ async function runPhisIndent(items, options = {}) {
             logCallback("Clicking login button...");
             await page.click('#btnLogin');
         } else {
-            logCallback("No credentials provided. Please enter credentials and login manually.");
+            logCallback("No credentials provided. Please try again.");
         }
 
-        logCallback("Waiting for dashboard to load...");
+        logCallback("Loading...");
 
         // Wait for Inventory menu to appear (this indicates successful login and dashboard load)
         await page.waitForSelector('span.z-treecell-text:has-text(" Inventory")', { timeout: 0 }); // Wait indefinitely
 
-        logCallback("Login successful. Navigating to Indent menu...");
+        logCallback("Login successful. Navigating to Intra Facility (Sent)...");
 
         // double click menu Inventory
         await page.dblclick('span.z-treecell-text:has-text(" Inventory")');
@@ -74,7 +74,7 @@ async function runPhisIndent(items, options = {}) {
         // click menu Intra Facility (Sent)
         await page.click('span.z-treecell-text:has-text(" Intra Facility (Sent)")');
 
-        logCallback("Navigated to Indent List. Creating new record...");
+        logCallback("Creating new indent...");
 
         // click button "[+]"
         await page.waitForSelector('button[_comp="button_IndentList_NewList"]');
@@ -94,7 +94,7 @@ async function runPhisIndent(items, options = {}) {
         await page.waitForSelector(substoreItemSelector);
         await page.click(substoreItemSelector);
 
-        logCallback("Starting to key in items...");
+        logCallback("Starting to add items");
 
         // click "Add Item"
         await page.waitForSelector('button[_comp="button_IndentDialog_AddNewItem"]');
@@ -102,14 +102,15 @@ async function runPhisIndent(items, options = {}) {
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
-            const { item_code, requested_qty } = item;
+            const { item_code, requested_qty, item_name } = item;
 
             if (!item_code || requested_qty === undefined || requested_qty === null || requested_qty === 0) {
                 logCallback(`Skipping invalid item at index ${i} (Code: ${item_code}, Qty: ${requested_qty})`);
                 continue;
             }
 
-            logCallback(`Processing item ${i + 1}/${items.length}: Code ${item_code}, Qty ${requested_qty}`);
+            const nameDisplay = item_name ? ` (${item_name})` : '';
+            logCallback(`Adding item ${i + 1}/${items.length}: Code ${item_code}${nameDisplay}, Qty ${requested_qty}`);
 
             // wait for a while and click selector bandbox_DrugNonDrug
             await page.waitForTimeout(1000);
@@ -133,22 +134,31 @@ async function runPhisIndent(items, options = {}) {
             await page.waitForSelector(rowSelector, { timeout: 15000 });
             await page.dblclick(rowSelector);
 
+            // wait for the item details to load from the server and populate the default values
+            await page.waitForTimeout(1500);
+
             // input/replace the indent qty
             await page.waitForSelector('input[_comp="lb_IndentAddItem_ItemQty"]');
-            await page.fill('input[_comp="lb_IndentAddItem_ItemQty"]', requested_qty.toString());
+            await page.click('input[_comp="lb_IndentAddItem_ItemQty"]');
+            await page.keyboard.press('Control+A');
+            await page.keyboard.press('Backspace');
+            await page.keyboard.type(requested_qty.toString());
+            await page.waitForTimeout(1000);
 
             // click on save button
             await page.click('button[_comp="button_IndentAddItem_Save"]');
+            await page.waitForTimeout(1000);
 
             // click on yes confirmation
             await page.waitForSelector('button.z-messagebox-button:has-text("Yes")');
             await page.click('button.z-messagebox-button:has-text("Yes")');
 
             // wait a bit for save to register before proceeding to next item
-            await page.waitForTimeout(1000);
+            await page.waitForTimeout(2000);
         }
 
-        logCallback("Finished adding all items. Closing Add Item window...");
+        logCallback("Finished adding all items. Closing the window...");
+        await page.waitForTimeout(1000);
 
         // after finishing click on X button
         await page.waitForSelector('button[_comp="button_IndentAddItem_btnClose"]');
@@ -157,12 +167,28 @@ async function runPhisIndent(items, options = {}) {
         logCallback("Saving the indent record...");
 
         // click on the main save button
+        await page.waitForTimeout(2000);
         await page.waitForSelector('button[_comp="button_IndentDialog_Save"]');
         await page.click('button[_comp="button_IndentDialog_Save"]');
 
         // click on confirmation yes
         await page.waitForSelector('button.z-messagebox-button:has-text("Yes")');
         await page.click('button.z-messagebox-button:has-text("Yes")');
+        await page.waitForTimeout(1500);
+        // click on confirmation OK
+        await page.waitForSelector('button.z-messagebox-button:has-text("OK")');
+        await page.click('button.z-messagebox-button:has-text("OK")');
+
+        logCallback("Waiting for Indent Number to be generated...");
+        await page.waitForTimeout(3000);
+
+        try {
+            await page.waitForSelector('input[_comp="tb_IndentDialog_IndentNo"]', { timeout: 10000 });
+            const indentNo = await page.$eval('input[_comp="tb_IndentDialog_IndentNo"]', el => el.value);
+            logCallback(`The PhIS Indent Number is: ${indentNo}`);
+        } catch (e) {
+            logCallback("Could not retrieve the Indent Number automatically.");
+        }
 
         logCallback("Indent process completed successfully!");
 

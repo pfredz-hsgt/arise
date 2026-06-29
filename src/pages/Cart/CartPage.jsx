@@ -165,6 +165,7 @@ const CartPage = () => {
         try {
             const items = credentialsSession.indent_items.map(item => ({
                 item_code: item.inventory_items?.item_code,
+                item_name: item.inventory_items?.name,
                 requested_qty: item.requested_qty
             })).filter(i => i.item_code && i.requested_qty > 0);
             
@@ -756,9 +757,27 @@ const CartPage = () => {
                     }}
                     ref={el => { if (el) el.scrollTop = el.scrollHeight; }}
                 >
-                    {terminalLogs.map((log, i) => (
-                        <div key={i} style={{ marginBottom: '4px' }}>{log}</div>
-                    ))}
+                    {terminalLogs.map((log, i) => {
+                        if (log.startsWith('The PhIS Indent Number is: ')) {
+                            const indentNo = log.replace('The PhIS Indent Number is: ', '').trim();
+                            return (
+                                <div key={i} style={{ marginBottom: '4px' }}>
+                                    The PhIS Indent Number is: <strong style={{ color: 'yellow' }}>{indentNo}</strong>
+                                    <Button 
+                                        size="small" 
+                                        style={{ marginLeft: 8, backgroundColor: '#333', color: 'white', borderColor: '#555' }} 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(indentNo);
+                                            message.success('Indent Number copied!');
+                                        }}
+                                    >
+                                        Copy
+                                    </Button>
+                                </div>
+                            );
+                        }
+                        return <div key={i} style={{ marginBottom: '4px' }}>{log}</div>;
+                    })}
                 </div>
             </Modal>
         </div >
