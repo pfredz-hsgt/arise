@@ -14,6 +14,8 @@ import {
     Popconfirm,
     Checkbox,
     InputNumber,
+    Form,
+    Input,
 } from 'antd';
 import {
     HistoryOutlined,
@@ -43,6 +45,12 @@ const CartPage = () => {
     const [editingItem, setEditingItem] = useState(null);
     const [newQuantity, setNewQuantity] = useState(0);
     const [updatingQty, setUpdatingQty] = useState(false);
+
+    // PhIS Automation State
+    const [isCredentialsModalVisible, setIsCredentialsModalVisible] = useState(false);
+    const [credentialsSession, setCredentialsSession] = useState(null);
+    const [isTerminalVisible, setIsTerminalVisible] = useState(false);
+    const [terminalLogs, setTerminalLogs] = useState([]);
 
     useEffect(() => {
         fetchCartSessions();
@@ -141,6 +149,67 @@ const CartPage = () => {
             message.error('Failed to update quantity');
         } finally {
             setUpdatingQty(false);
+        }
+    };
+
+    const handlePhisIndentClick = (session) => {
+        setCredentialsSession(session);
+        setIsCredentialsModalVisible(true);
+    };
+
+    const handleCredentialsSubmit = async (values) => {
+        setIsCredentialsModalVisible(false);
+        setIsTerminalVisible(true);
+        setTerminalLogs(['Connecting to backend...']);
+        
+        try {
+            const items = credentialsSession.indent_items.map(item => ({
+                item_code: item.inventory_items?.item_code,
+                requested_qty: item.requested_qty
+            })).filter(i => i.item_code && i.requested_qty > 0);
+            
+            if (items.length === 0) {
+                setTerminalLogs(prev => [...prev, 'Error: No valid items (with code and qty > 0) to indent.']);
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const apiUrl = import.meta.env.PROD ? '/arise/api' : 'http://localhost:3005/api';
+            
+            const response = await fetch(`${apiUrl}/indents/phis-indent`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    items,
+                    username: values.username,
+                    password: values.password
+                })
+            });
+
+            if (!response.body) {
+                throw new Error('ReadableStream not yet supported in this browser.');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n').filter(l => l.trim().length > 0);
+                if (lines.length > 0) {
+                    setTerminalLogs(prev => [...prev, ...lines]);
+                }
+            }
+            setTerminalLogs(prev => [...prev, 'Process finished.']);
+        } catch (error) {
+            console.error('Error in PhIS indent:', error);
+            setTerminalLogs(prev => [...prev, `Error: ${error.message}`]);
         }
     };
 
@@ -409,26 +478,34 @@ const CartPage = () => {
                                 }
                                 key={session.id}
                                 extra={
-                                    <Popconfirm
-                                        title="Clear this session?"
-                                        description="Mark this indent as approved and processed?"
-                                        onConfirm={(e) => {
-                                            e.stopPropagation();
-                                            handleClearSession(session.id);
-                                        }}
-                                        onCancel={(e) => e.stopPropagation()}
-                                        okText="Yes"
-                                        cancelText="No"
-                                    >
+                                    <Space size="small">
                                         <Button
                                             size="small"
-                                            type="primary"
-                                            icon={<CheckCircleOutlined />}
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={(e) => { e.stopPropagation(); handlePhisIndentClick(session); }}
                                         >
-                                            Approve & Clear
+                                            Indent PhIS
                                         </Button>
-                                    </Popconfirm>
+                                        <Popconfirm
+                                            title="Clear this session?"
+                                            description="Mark this indent as approved and processed?"
+                                            onConfirm={(e) => {
+                                                e.stopPropagation();
+                                                handleClearSession(session.id);
+                                            }}
+                                            onCancel={(e) => e.stopPropagation()}
+                                            okText="Yes"
+                                            cancelText="No"
+                                        >
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                icon={<CheckCircleOutlined />}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                Approve & Clear
+                                            </Button>
+                                        </Popconfirm>
+                                    </Space>
                                 }
                             >
                                 <List
@@ -628,6 +705,61 @@ const CartPage = () => {
                         )}
                     </div>
                 )}
+            </Modal>
+
+            <Modal
+                title="Enter PhIS Credentials"
+                open={isCredentialsModalVisible}
+                onCancel={() => setIsCredentialsModalVisible(false)}
+                footer={null}
+            >
+                <Form onFinish={handleCredentialsSubmit} layout="vertical">
+                    <Form.Item
+                        name="username"
+                        label="Username"
+                        rules={[{ required: true, message: 'Please input your username!' }]}
+                    >
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        name="password"
+                        label="Password"
+                        rules={[{ required: true, message: 'Please input your password!' }]}
+                    >
+                        <Input.Password />
+                    </Form.Item>
+                    <Form.Item>
+                        <Button type="primary" htmlType="submit" block>
+                            Start Automation
+                        </Button>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
+                title="PhIS Automation Logs"
+                open={isTerminalVisible}
+                onCancel={() => setIsTerminalVisible(false)}
+                footer={null}
+                width={800}
+            >
+                <div 
+                    style={{ 
+                        backgroundColor: '#1e1e1e', 
+                        color: '#4af626', 
+                        padding: '16px', 
+                        height: '400px', 
+                        overflowY: 'auto', 
+                        fontFamily: 'monospace',
+                        borderRadius: '6px',
+                        whiteSpace: 'pre-wrap'
+                    }}
+                    ref={el => { if (el) el.scrollTop = el.scrollHeight; }}
+                >
+                    {terminalLogs.map((log, i) => (
+                        <div key={i} style={{ marginBottom: '4px' }}>{log}</div>
+                    ))}
+                </div>
             </Modal>
         </div >
     );

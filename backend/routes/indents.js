@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
 import { authenticateToken } from './auth.js';
+import { runPhisIndent } from '../utils/phis_indent.js';
 
 const router = express.Router();
 
@@ -186,6 +187,30 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         res.json({ message: 'Deleted successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/phis-indent', authenticateToken, async (req, res) => {
+    const { items, username, password } = req.body;
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    const logCallback = (msg) => {
+        res.write(msg + '\n');
+    };
+
+    try {
+        await runPhisIndent(items, {
+            headless: true, // Set to false so the user can see it running
+            username,
+            password,
+            logCallback
+        });
+        res.end();
+    } catch (err) {
+        logCallback(`ERROR: ${err.message}`);
+        res.end();
     }
 });
 
