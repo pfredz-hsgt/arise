@@ -130,8 +130,8 @@ async function runPhisIndent(items, options = {}) {
             await page.waitForTimeout(1000);
 
             // dblclick on item from list (that has same code as entered previously)
-            const rowSelector = `div.z-listbox-body table tr.z-listitem:has(div.z-listcell-content:text-is("${item_code}"))`;
-            await page.waitForSelector(rowSelector, { timeout: 15000 });
+            const rowSelector = `div.z-listbox-body table tr.z-listitem:has(div.z-listcell-content:has-text("${item_code}"))`;
+            await page.waitForSelector(rowSelector, { timeout: 30000 });
             await page.dblclick(rowSelector);
 
             // wait for the item details to load from the server and populate the default values

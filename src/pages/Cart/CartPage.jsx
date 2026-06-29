@@ -767,8 +767,25 @@ const CartPage = () => {
                                         size="small" 
                                         style={{ marginLeft: 8, backgroundColor: '#333', color: 'white', borderColor: '#555' }} 
                                         onClick={() => {
-                                            navigator.clipboard.writeText(indentNo);
-                                            message.success('Indent Number copied!');
+                                            if (navigator.clipboard && window.isSecureContext) {
+                                                navigator.clipboard.writeText(indentNo);
+                                                message.success('Indent Number copied!');
+                                            } else {
+                                                const textArea = document.createElement("textarea");
+                                                textArea.value = indentNo;
+                                                textArea.style.position = "absolute";
+                                                textArea.style.left = "-999999px";
+                                                document.body.appendChild(textArea);
+                                                textArea.select();
+                                                try {
+                                                    document.execCommand('copy');
+                                                    message.success('Indent Number copied!');
+                                                } catch (error) {
+                                                    console.error('Fallback copy failed', error);
+                                                    message.error('Failed to copy.');
+                                                }
+                                                document.body.removeChild(textArea);
+                                            }
                                         }}
                                     >
                                         Copy
