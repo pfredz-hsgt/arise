@@ -202,7 +202,7 @@ router.post('/phis-indent', authenticateToken, async (req, res) => {
 
     try {
         await runPhisIndent(items, {
-            headless: false, // Set to false so the user can see it running
+            headless: true, // Set to false so the user can see it running
             username,
             password,
             logCallback
