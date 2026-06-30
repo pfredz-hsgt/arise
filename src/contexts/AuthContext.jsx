@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const data = await api.get('/auth/me');
             if (data && data.user) {
-                setUser(data.user);
+                setUser({ ...data.user, requiresPasswordChange: data.requiresPasswordChange });
             } else {
                 signOut();
             }
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         const data = await api.post('/auth/login', { email, password });
         localStorage.setItem('token', data.token);
-        setUser(data.user);
+        setUser({ ...data.user, requiresPasswordChange: data.requiresPasswordChange });
         return data;
     };
 
@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }) => {
 
     const changePassword = async (newPassword) => {
         const data = await api.post('/auth/change-password', { newPassword });
+        setUser(prev => ({ ...prev, requiresPasswordChange: false }));
         return data;
     };
 

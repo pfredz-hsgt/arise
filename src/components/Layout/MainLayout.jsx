@@ -32,6 +32,14 @@ const MainLayout = () => {
     const [passwordForm] = Form.useForm();
     const [changingPassword, setChangingPassword] = useState(false);
 
+    const isForcedChange = user?.requiresPasswordChange;
+
+    React.useEffect(() => {
+        if (isForcedChange) {
+            setPasswordModalVisible(true);
+        }
+    }, [isForcedChange]);
+
     const handleSignOut = async () => {
         await signOut();
         navigate('/login');
@@ -270,16 +278,27 @@ const MainLayout = () => {
 
             {/* Change Password Modal */}
             <Modal
-                title="Change Password"
+                title={isForcedChange ? "Action Required: Change Temporary Password" : "Change Password"}
                 open={passwordModalVisible}
                 onCancel={() => {
+                    if (isForcedChange) return;
                     setPasswordModalVisible(false);
                     passwordForm.resetFields();
                 }}
                 onOk={() => passwordForm.submit()}
                 confirmLoading={changingPassword}
                 okText="Update Password"
+                closable={!isForcedChange}
+                maskClosable={!isForcedChange}
+                cancelButtonProps={{ style: { display: isForcedChange ? 'none' : 'inline-block' } }}
             >
+                {isForcedChange && (
+                    <div style={{ marginBottom: 16 }}>
+                        <Typography.Text type="danger">
+                            You have logged in with a temporary password. Please set a new password to continue using the system.
+                        </Typography.Text>
+                    </div>
+                )}
                 <Form
                     form={passwordForm}
                     layout="vertical"

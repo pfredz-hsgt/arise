@@ -36,18 +36,35 @@ router.post('/login', async (req, res) => {
         }
 
         const user = result.rows[0];
-        const isMatch = await bcrypt.compare(password, user.password_hash);
+        let isMatch = await bcrypt.compare(password, user.password_hash);
+        let usedTempPassword = false;
+
+        if (isMatch) {
+            if (user.temp_password_hash) {
+                await pool.query('UPDATE users SET temp_password_hash = NULL WHERE id = $1', [user.id]);
+            }
+        } else if (user.temp_password_hash) {
+            const isTempMatch = await bcrypt.compare(password, user.temp_password_hash);
+            if (isTempMatch) {
+                isMatch = true;
+                usedTempPassword = true;
+                await pool.query('UPDATE users SET password_hash = $1, temp_password_hash = NULL, must_change_password = true WHERE id = $2', [user.temp_password_hash, user.id]);
+            }
+        }
+
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
+        const requiresPasswordChange = usedTempPassword || user.must_change_password;
+
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role, name: user.name },
+            { id: user.id, email: user.email, role: user.role, name: user.name, requiresPasswordChange },
             JWT_SECRET,
             { expiresIn: '1d' }
         );
 
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name } });
+        res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name }, requiresPasswordChange });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -62,12 +79,11 @@ router.post('/reset-password', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Generate 6 character random password
-        // const tempPassword = Math.random().toString(36).slice(-6);
-        const tempPassword = "F@rmasi.1234"; //temporary only
+        // Generate 8 character random password
+        const tempPassword = Math.random().toString(36).slice(-8);
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-        await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hashedPassword, email]);
+        await pool.query('UPDATE users SET temp_password_hash = $1, must_change_password = false WHERE email = $2', [hashedPassword, email]);
 
         // Configure nodemailer
         const transporter = nodemailer.createTransport({
@@ -83,9 +99,9 @@ router.post('/reset-password', async (req, res) => {
         const mailOptions = {
             from: process.env.SMTP_FROM || '"ARISE System" <noreply@arise.local>',
             to: email,
-            subject: 'Your Password Has Been Reset',
-            text: `Your password has been reset. Your temporary password is: ${tempPassword}\n\nPlease change your password after logging in.`,
-            html: `<p>Your password has been reset.</p><p>Your temporary password is: <strong>${tempPassword}</strong></p><p>Please change your password after logging in.</p>`
+            subject: '(ARISE) Your Password Has Been Reset',
+            text: `Your ARISE system password has been reset. Your temporary password is: ${tempPassword}\n\nPlease change your password after logging in.`,
+            html: `<p>Your ARISE system password has been reset.</p><p>Your temporary password is: <strong>${tempPassword}</strong></p><p>Please change your password after logging in.</p>`
         };
 
         try {
@@ -119,7 +135,7 @@ router.post('/change-password', authenticateToken, async (req, res) => {
     const { newPassword } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, req.user.id]);
+        await pool.query('UPDATE users SET password_hash = $1, temp_password_hash = NULL, must_change_password = false WHERE id = $2', [hashedPassword, req.user.id]);
         res.json({ success: true, message: 'Password updated successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -129,11 +145,11 @@ router.post('/change-password', authenticateToken, async (req, res) => {
 // Get current user profile
 router.get('/me', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, email, role, name, created_at FROM users WHERE id = $1', [req.user.id]);
+        const result = await pool.query('SELECT id, email, role, name, created_at, must_change_password FROM users WHERE id = $1', [req.user.id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json({ user: result.rows[0] });
+        res.json({ user: result.rows[0], requiresPasswordChange: result.rows[0].must_change_password });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
