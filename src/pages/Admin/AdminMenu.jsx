@@ -135,7 +135,9 @@ const UserManagement = () => {
         try {
             await api.put(`/auth/users/${editingUser.id}`, {
                 name: values.name,
-                role: values.role
+                role: values.role,
+                phis_username: values.phis_username,
+                phis_password: values.phis_password
             });
 
             message.success("User updated successfully");
@@ -178,7 +180,9 @@ const UserManagement = () => {
                             editForm.setFieldsValue({
                                 name: record.name,
                                 email: record.email,
-                                role: record.role
+                                role: record.role,
+                                phis_username: record.phis_username,
+                                phis_password: record.phis_password
                             });
                             setIsEditModalVisible(true);
                         }}
@@ -220,6 +224,12 @@ const UserManagement = () => {
                     <Form.Item name="password" label="Temporary Password" rules={[{ required: true }]}>
                         <Input.Password />
                     </Form.Item>
+                    <Form.Item name="phis_username" label="PHIS Username">
+                        <Input />
+                    </Form.Item>
+                    <Form.Item name="phis_password" label="PHIS Password">
+                        <Input.Password />
+                    </Form.Item>
                     <Form.Item name="role" label="Role" rules={[{ required: true }]}>
                         <Select>
                             <Option value="Indenter">Indenter</Option>
@@ -248,6 +258,12 @@ const UserManagement = () => {
                     </Form.Item>
                     <Form.Item name="email" label="Email">
                         <Input disabled />
+                    </Form.Item>
+                    <Form.Item name="phis_username" label="PHIS Username">
+                        <Input />
+                    </Form.Item>
+                    <Form.Item name="phis_password" label="PHIS Password">
+                        <Input.Password />
                     </Form.Item>
                     <Form.Item name="role" label="Role" rules={[{ required: true }]}>
                         <Select>

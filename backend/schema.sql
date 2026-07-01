@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT DEFAULT 'Indenter' CHECK (role IN ('Issuer', 'Indenter')),
+  phis_username TEXT,
+  phis_password TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -22,6 +24,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   name TEXT NOT NULL,
   item_code TEXT,
   pku TEXT,
+  convert_sku INTEGER DEFAULT 1,
   puchase_type TEXT CHECK (puchase_type IN ('LP', 'APPL')),
   std_kt TEXT CHECK (std_kt IN ('STD', 'KT')),
   row TEXT,
@@ -49,6 +52,7 @@ CREATE TABLE IF NOT EXISTS indent_sessions (
 );
 
 -- Table: indent_items
+-- (Stores Routine Indent Items & Short Expiry)
 CREATE TABLE IF NOT EXISTS indent_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   session_id UUID REFERENCES indent_sessions(id) ON DELETE CASCADE,
@@ -67,7 +71,7 @@ CREATE TABLE IF NOT EXISTS indent_items (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Table: indent_requests
+-- Table: indent_requests (Ad-Hoc Requests & Cart Items)
 -- Stores cart items and finalized orders
 CREATE TABLE IF NOT EXISTS indent_requests (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

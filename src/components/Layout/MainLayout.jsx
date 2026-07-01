@@ -26,17 +26,17 @@ const MainLayout = () => {
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
-    const { user, profile, isIssuer, signOut, changePassword } = useAuth();
+    const { user, profile, isIssuer, signOut, changePassword, updateProfile } = useAuth();
 
-    const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-    const [passwordForm] = Form.useForm();
-    const [changingPassword, setChangingPassword] = useState(false);
+    const [profileModalVisible, setProfileModalVisible] = useState(false);
+    const [profileForm] = Form.useForm();
+    const [updatingProfile, setUpdatingProfile] = useState(false);
 
     const isForcedChange = user?.requiresPasswordChange;
 
     React.useEffect(() => {
         if (isForcedChange) {
-            setPasswordModalVisible(true);
+            setProfileModalVisible(true);
         }
     }, [isForcedChange]);
 
@@ -45,19 +45,37 @@ const MainLayout = () => {
         navigate('/login');
     };
 
-    const handleChangePassword = async (values) => {
-        setChangingPassword(true);
+    const handleUpdateProfile = async (values) => {
+        setUpdatingProfile(true);
         try {
-            await changePassword(values.newPassword);
-            message.success('Password updated successfully');
-            setPasswordModalVisible(false);
-            passwordForm.resetFields();
+            if (values.newPassword) {
+                await changePassword(values.newPassword);
+            }
+            if (!isForcedChange || values.name || values.phis_username || values.phis_password) {
+                await updateProfile({
+                    name: values.name,
+                    phis_username: values.phis_username,
+                    phis_password: values.phis_password
+                });
+            }
+            message.success('Profile updated successfully');
+            setProfileModalVisible(false);
+            profileForm.resetFields();
         } catch (error) {
-            console.error('Error updating password:', error);
-            message.error(error.message || 'Failed to update password');
+            console.error('Error updating profile:', error);
+            message.error(error.message || 'Failed to update profile');
         } finally {
-            setChangingPassword(false);
+            setUpdatingProfile(false);
         }
+    };
+
+    const openProfileModal = () => {
+        profileForm.setFieldsValue({
+            name: user?.name,
+            phis_username: user?.phis_username,
+            phis_password: user?.phis_password
+        });
+        setProfileModalVisible(true);
     };
 
     const userMenu = {
@@ -74,10 +92,10 @@ const MainLayout = () => {
                 type: 'divider'
             },
             {
-                key: 'changePassword',
-                icon: <LockOutlined />,
-                label: 'Change Password',
-                onClick: () => setPasswordModalVisible(true)
+                key: 'editProfile',
+                icon: <UserOutlined />,
+                label: 'Edit Profile',
+                onClick: openProfileModal
             },
             {
                 key: 'logout',
@@ -276,18 +294,18 @@ const MainLayout = () => {
                 </Content>
             </Layout>
 
-            {/* Change Password Modal */}
+            {/* Edit Profile Modal */}
             <Modal
-                title={isForcedChange ? "Action Required: Change Temporary Password" : "Change Password"}
-                open={passwordModalVisible}
+                title={isForcedChange ? "Action Required: Change Temporary Password" : "Edit Profile"}
+                open={profileModalVisible}
                 onCancel={() => {
                     if (isForcedChange) return;
-                    setPasswordModalVisible(false);
-                    passwordForm.resetFields();
+                    setProfileModalVisible(false);
+                    profileForm.resetFields();
                 }}
-                onOk={() => passwordForm.submit()}
-                confirmLoading={changingPassword}
-                okText="Update Password"
+                onOk={() => profileForm.submit()}
+                confirmLoading={updatingProfile}
+                okText={isForcedChange ? "Update Password" : "Save Changes"}
                 closable={!isForcedChange}
                 maskClosable={!isForcedChange}
                 cancelButtonProps={{ style: { display: isForcedChange ? 'none' : 'inline-block' } }}
@@ -300,15 +318,37 @@ const MainLayout = () => {
                     </div>
                 )}
                 <Form
-                    form={passwordForm}
+                    form={profileForm}
                     layout="vertical"
-                    onFinish={handleChangePassword}
+                    onFinish={handleUpdateProfile}
                 >
                     <Form.Item
+                        name="name"
+                        label="Name"
+                        rules={[{ required: !isForcedChange, message: 'Please input your name' }]}
+                    >
+                        <Input placeholder="Enter your name" />
+                    </Form.Item>
+                    
+                    <Form.Item
+                        name="phis_username"
+                        label="PHIS Username"
+                    >
+                        <Input placeholder="Enter PHIS username" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="phis_password"
+                        label="PHIS Password"
+                    >
+                        <Input.Password placeholder="Enter PHIS password" />
+                    </Form.Item>
+
+                    <Form.Item
                         name="newPassword"
-                        label="New Password"
+                        label={isForcedChange ? "New Password" : "New Password (leave blank to keep current)"}
                         rules={[
-                            { required: true, message: 'Please input your new password!' },
+                            { required: isForcedChange, message: 'Please input your new password!' },
                             { min: 6, message: 'Password must be at least 6 characters!' }
                         ]}
                     >
@@ -319,7 +359,7 @@ const MainLayout = () => {
                         label="Confirm New Password"
                         dependencies={['newPassword']}
                         rules={[
-                            { required: true, message: 'Please confirm your new password!' },
+                            { required: isForcedChange, message: 'Please confirm your new password!' },
                             ({ getFieldValue }) => ({
                                 validator(_, value) {
                                     if (!value || getFieldValue('newPassword') === value) {

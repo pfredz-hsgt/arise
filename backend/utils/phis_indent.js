@@ -7,10 +7,11 @@ import { chromium } from 'playwright';
  */
 async function runPhisIndent(items, options = {}) {
     const logCallback = options.logCallback || console.log;
-    const headless = options.headless !== undefined ? options.headless : false;
+    const headless = options.headless !== undefined ? options.headless : true;
 
     logCallback("Launching browser...");
     const browser = await chromium.launch({ headless });
+    options.browser = browser;
     const page = await browser.newPage();
 
     try {
@@ -53,7 +54,21 @@ async function runPhisIndent(items, options = {}) {
         // Wait for Inventory menu to appear (this indicates successful login and dashboard load)
         await page.waitForSelector('span.z-treecell-text:has-text(" Inventory")', { timeout: 0 }); // Wait indefinitely
 
-        logCallback("Login successful. Navigating to Intra Facility (Sent)...");
+        try {
+            const userInfoText = await page.locator('th.z-column div.z-column-content:has-text("User:")').textContent({ timeout: 5000 });
+            if (userInfoText) {
+                const match = userInfoText.match(/User:\s*([^;]+)/);
+                if (match && match[1]) {
+                    logCallback(`Login Successful. Logged in as user ${match[1].trim()}`);
+                } else {
+                    logCallback(`Login Successful. ${userInfoText}`);
+                }
+            } else {
+                logCallback("Login successful. Navigating to Intra Facility (Sent)...");
+            }
+        } catch (e) {
+            logCallback("Login successful. Navigating to Intra Facility (Sent)...");
+        }
 
         // double click menu Inventory
         await page.dblclick('span.z-treecell-text:has-text(" Inventory")');
@@ -193,12 +208,16 @@ async function runPhisIndent(items, options = {}) {
         logCallback("Indent process completed successfully!");
 
     } catch (error) {
-        logCallback(`Error during PhIS Indent: ${error.message}`);
-        console.error(error);
+        if (options.isAborted) {
+            // Error was already logged by indents.js or handled gracefully
+            // But we can log it here to be safe if indents.js doesn't catch it quickly
+        } else {
+            logCallback(`Error during PhIS Indent: ${error.message}`);
+            console.error(error);
+        }
     } finally {
         logCallback("Finished script execution.");
-        // Browser intentionally left open so the user can verify
-        // await browser.close();
+        await browser.close();
     }
 }
 

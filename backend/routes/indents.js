@@ -4,12 +4,13 @@ import { authenticateToken } from './auth.js';
 import { runPhisIndent } from '../utils/phis_indent.js';
 
 const router = express.Router();
+const activePhisProcesses = new Map();
 
 // Get cart data for Issuer
 router.get('/cart', authenticateToken, async (req, res) => {
     try {
         const sessionsResult = await pool.query(`
-            SELECT s.*, u.name as profile_name
+            SELECT s.*, u.name as profile_name, u.phis_username, u.phis_password
             FROM indent_sessions s
             LEFT JOIN users u ON s.user_id = u.id
             WHERE s.status = 'Submitted'
@@ -24,12 +25,12 @@ router.get('/cart', authenticateToken, async (req, res) => {
                 LEFT JOIN inventory_items inv ON i.item_id = inv.id
                 WHERE i.session_id = $1
             `, [s.id]);
-            s.profiles = { name: s.profile_name };
+            s.profiles = { name: s.profile_name, phis_username: s.phis_username, phis_password: s.phis_password };
             s.indent_items = itemsResult.rows;
         }
 
         const requestsResult = await pool.query(`
-            SELECT ir.*, u.name as profile_name, row_to_json(inv.*) as inventory_items
+            SELECT ir.*, u.name as profile_name, u.phis_username, u.phis_password, row_to_json(inv.*) as inventory_items
             FROM indent_requests ir
             LEFT JOIN users u ON ir.user_id = u.id
             LEFT JOIN inventory_items inv ON ir.item_id = inv.id
@@ -37,7 +38,7 @@ router.get('/cart', authenticateToken, async (req, res) => {
             ORDER BY ir.created_at ASC
         `);
         const requestsData = requestsResult.rows.map(req => {
-            req.profiles = { name: req.profile_name };
+            req.profiles = { name: req.profile_name, phis_username: req.phis_username, phis_password: req.phis_password };
             return req;
         });
 
@@ -191,7 +192,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 router.post('/phis-indent', authenticateToken, async (req, res) => {
-    const { items, username, password } = req.body;
+    const { items, username, password, sessionId } = req.body;
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
@@ -200,17 +201,65 @@ router.post('/phis-indent', authenticateToken, async (req, res) => {
         res.write(msg + '\n');
     };
 
+    const options = {
+        headless: true, // Set to false if you want to see it running, true in production
+        username,
+        password,
+        logCallback,
+        isAborted: false
+    };
+
+    if (sessionId) {
+        activePhisProcesses.set(sessionId, options);
+    }
+
+    const abortProcess = () => {
+        if (!options.isAborted && !res.writableEnded) {
+            options.isAborted = true;
+            console.log("Client disconnected. Aborting PhIS indent...");
+            if (options.browser) {
+                options.browser.close().catch(() => { });
+            }
+        }
+    };
+
+    req.on('aborted', abortProcess);
+    req.on('close', abortProcess);
+    res.on('close', abortProcess);
+
     try {
-        await runPhisIndent(items, {
-            headless: true, // Set to false so the user can see it running
-            username,
-            password,
-            logCallback
-        });
-        res.end();
+        await runPhisIndent(items, options);
     } catch (err) {
-        logCallback(`ERROR: ${err.message}`);
-        res.end();
+        if (options.isAborted || err.message.includes('browser has disconnected') || err.message.includes('Target page, context or browser has been closed')) {
+            // Already aborted
+        } else {
+            logCallback(`ERROR: ${err.message}`);
+        }
+    } finally {
+        if (sessionId) {
+            activePhisProcesses.delete(sessionId);
+        }
+        if (!res.writableEnded) {
+            res.end();
+        }
+    }
+});
+
+router.post('/abort-phis-indent', authenticateToken, async (req, res) => {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+        return res.status(400).json({ success: false, message: "Missing sessionId" });
+    }
+    const processOptions = activePhisProcesses.get(sessionId);
+    if (processOptions) {
+        processOptions.isAborted = true;
+        if (processOptions.browser) {
+            processOptions.browser.close().catch(() => { });
+        }
+        activePhisProcesses.delete(sessionId);
+        res.json({ success: true, message: "PhIS Indent process forcefully aborted." });
+    } else {
+        res.json({ success: false, message: "No active PhIS Indent process found for this session." });
     }
 });
 

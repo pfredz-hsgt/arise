@@ -58,6 +58,15 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
+    const updateProfile = async (values) => {
+        const data = await api.put('/auth/profile', values);
+        if (data.user) {
+            setUser(prev => ({ ...prev, ...data.user }));
+        }
+        return data;
+    };
+
+
     const value = {
         user,
         profile: user, // For backwards compatibility with existing components
@@ -66,6 +75,7 @@ export const AuthProvider = ({ children }) => {
         signOut,
         resetPassword,
         changePassword,
+        updateProfile,
         isIssuer: user?.role === 'Issuer',
         isIndenter: user?.role === 'Indenter'
     };

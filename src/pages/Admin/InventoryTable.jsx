@@ -44,7 +44,7 @@ const InventoryTable = () => {
     };
 
     const setupRealtimeSubscription = () => {
-        return () => {};
+        return () => { };
     };
 
     const handleAdd = () => {
@@ -112,6 +112,12 @@ const InventoryTable = () => {
             title: 'PKU',
             dataIndex: 'pku',
             key: 'pku',
+            width: 100,
+        },
+        {
+            title: 'SKU Conversion',
+            dataIndex: 'convert_sku',
+            key: 'convert_sku',
             width: 100,
         },
         {
@@ -321,6 +327,13 @@ const InventoryTable = () => {
                             label="PKU"
                         >
                             <Input placeholder="e.g., PKU001" style={{ width: 150 }} />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="convert_sku"
+                            label="Convert SKU"
+                        >
+                            <InputNumber placeholder="1" style={{ width: 100 }} min={1} inputMode="numeric" />
                         </Form.Item>
                     </Space>
 

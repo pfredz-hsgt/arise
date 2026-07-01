@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Typography,
@@ -22,7 +22,9 @@ import {
     EyeOutlined,
     DownloadOutlined,
     DeleteOutlined,
-    CheckCircleOutlined
+    CheckCircleOutlined,
+    CopyOutlined,
+    ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { CaretDoubleUpIcon, PackageIcon, PlusSquareIcon, NoteIcon } from '@phosphor-icons/react';
 import { api } from '../../lib/api';
@@ -47,10 +49,11 @@ const CartPage = () => {
     const [updatingQty, setUpdatingQty] = useState(false);
 
     // PhIS Automation State
-    const [isCredentialsModalVisible, setIsCredentialsModalVisible] = useState(false);
-    const [credentialsSession, setCredentialsSession] = useState(null);
     const [isTerminalVisible, setIsTerminalVisible] = useState(false);
     const [terminalLogs, setTerminalLogs] = useState([]);
+    const [successIndentNo, setSuccessIndentNo] = useState(null);
+    const [activeSessionId, setActiveSessionId] = useState(null);
+    const abortControllerRef = useRef(null);
 
     useEffect(() => {
         fetchCartSessions();
@@ -108,7 +111,11 @@ const CartPage = () => {
                         created_at: reqs[0].created_at,
                         session_type: 'Urgent Indent',
                         rak: null,
-                        profiles: { name: profileName },
+                        profiles: {
+                            name: profileName,
+                            phis_username: reqs[0].profiles?.phis_username,
+                            phis_password: reqs[0].profiles?.phis_password
+                        },
                         indent_items: mappedItems,
                         isAdhocRequests: true,
                         profileName: profileName // useful for clearing logic
@@ -153,22 +160,42 @@ const CartPage = () => {
     };
 
     const handlePhisIndentClick = (session) => {
-        setCredentialsSession(session);
-        setIsCredentialsModalVisible(true);
+        Modal.confirm({
+            title: 'Confirm PhIS Indent',
+            icon: <ExclamationCircleOutlined style={{ color: '#1890ff' }} />,
+            content: 'Are you sure you want to proceed with this PhIS Indent?',
+            okText: 'Yes, Proceed',
+            cancelText: 'Cancel',
+            centered: true,
+            okButtonProps: { type: 'primary' },
+            onOk: () => {
+                startPhisIndent(session);
+            }
+        });
     };
 
-    const handleCredentialsSubmit = async (values) => {
-        setIsCredentialsModalVisible(false);
+    const startPhisIndent = async (session) => {
+        const username = session.profiles?.phis_username;
+        const password = session.profiles?.phis_password;
+
+        if (!username || !password) {
+            message.error(`Indenter '${session.profiles?.name || 'Unknown'}' has not set their PHIS credentials. Please update their profile.`);
+            return;
+        }
+
         setIsTerminalVisible(true);
         setTerminalLogs(['Connecting to backend...']);
-        
+        setActiveSessionId(session.id);
+
+        abortControllerRef.current = new AbortController();
+
         try {
-            const items = credentialsSession.indent_items.map(item => ({
+            const items = session.indent_items.map(item => ({
                 item_code: item.inventory_items?.item_code,
                 item_name: item.inventory_items?.name,
-                requested_qty: item.requested_qty
+                requested_qty: item.requested_qty * (item.inventory_items?.convert_sku || 1)
             })).filter(i => i.item_code && i.requested_qty > 0);
-            
+
             if (items.length === 0) {
                 setTerminalLogs(prev => [...prev, 'Error: No valid items (with code and qty > 0) to indent.']);
                 return;
@@ -176,7 +203,7 @@ const CartPage = () => {
 
             const token = localStorage.getItem('token');
             const apiUrl = import.meta.env.PROD ? '/arise/api' : 'http://localhost:3005/api';
-            
+
             const response = await fetch(`${apiUrl}/indents/phis-indent`, {
                 method: 'POST',
                 headers: {
@@ -185,9 +212,11 @@ const CartPage = () => {
                 },
                 body: JSON.stringify({
                     items,
-                    username: values.username,
-                    password: values.password
-                })
+                    username,
+                    password,
+                    sessionId: session.id
+                }),
+                signal: abortControllerRef.current.signal
             });
 
             if (!response.body) {
@@ -200,18 +229,57 @@ const CartPage = () => {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                
+
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n').filter(l => l.trim().length > 0);
                 if (lines.length > 0) {
                     setTerminalLogs(prev => [...prev, ...lines]);
+
+                    // Check if indent number was returned
+                    for (const line of lines) {
+                        if (line.startsWith('The PhIS Indent Number is: ')) {
+                            const indentNo = line.replace('The PhIS Indent Number is: ', '').trim();
+                            setSuccessIndentNo(indentNo);
+                        }
+                    }
                 }
             }
             setTerminalLogs(prev => [...prev, 'Process finished.']);
         } catch (error) {
-            console.error('Error in PhIS indent:', error);
-            setTerminalLogs(prev => [...prev, `Error: ${error.message}`]);
+            if (error.name === 'AbortError') {
+                setTerminalLogs(prev => [...prev, 'PhIS indenting process terminated by user']);
+                console.log('Indent process aborted by user.');
+            } else {
+                console.error('Error in PhIS indent:', error);
+                setTerminalLogs(prev => [...prev, `Error: ${error.message}`]);
+            }
         }
+    };
+
+    const handleAbortProcess = async () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+
+        if (activeSessionId) {
+            try {
+                const token = localStorage.getItem('token');
+                const apiUrl = import.meta.env.PROD ? '/arise/api' : 'http://localhost:3005/api';
+                await fetch(`${apiUrl}/indents/abort-phis-indent`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ sessionId: activeSessionId })
+                });
+            } catch (err) {
+                console.error("Failed to abort process remotely", err);
+            }
+        }
+        setIsTerminalVisible(false);
+        setActiveSessionId(null);
     };
 
     const handleClearSession = async (sessionId) => {
@@ -708,107 +776,97 @@ const CartPage = () => {
                 )}
             </Modal>
 
-            <Modal
-                title="Enter PhIS Credentials"
-                open={isCredentialsModalVisible}
-                onCancel={() => setIsCredentialsModalVisible(false)}
-                footer={null}
-            >
-                <Form onFinish={handleCredentialsSubmit} layout="vertical">
-                    <Form.Item
-                        name="username"
-                        label="Username"
-                        rules={[{ required: true, message: 'Please input your username!' }]}
-                    >
-                        <Input />
-                    </Form.Item>
-                    <Form.Item
-                        name="password"
-                        label="Password"
-                        rules={[{ required: true, message: 'Please input your password!' }]}
-                    >
-                        <Input.Password />
-                    </Form.Item>
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit" block>
-                            Start Automation
-                        </Button>
-                    </Form.Item>
-                </Form>
-            </Modal>
 
             <Modal
-                title="PhIS Automation Logs"
+                title="PhIS Indent Logs *DO NOT CLOSE THIS WINDOW*"
                 open={isTerminalVisible}
-                onCancel={() => setIsTerminalVisible(false)}
-                footer={null}
+                onCancel={handleAbortProcess}
+                footer={[
+                    <Button
+                        key="abort"
+                        danger
+                        type="primary"
+                        size="large"
+                        onClick={handleAbortProcess}
+                        style={{ width: '100%', fontWeight: 'bold' }}
+                    >
+                        ABORT PROCESS
+                    </Button>
+                ]}
                 width={800}
             >
-                <div 
-                    style={{ 
-                        backgroundColor: '#1e1e1e', 
-                        color: '#4af626', 
-                        padding: '16px', 
-                        height: '400px', 
-                        overflowY: 'auto', 
+                <div
+                    style={{
+                        backgroundColor: '#1e1e1e',
+                        color: '#4af626',
+                        padding: '16px',
+                        height: '400px',
+                        overflowY: 'auto',
                         fontFamily: 'monospace',
                         borderRadius: '6px',
                         whiteSpace: 'pre-wrap'
                     }}
                     ref={el => { if (el) el.scrollTop = el.scrollHeight; }}
                 >
-                    {terminalLogs.map((log, i) => {
-                        if (log.startsWith('The PhIS Indent Number is: ')) {
-                            const indentNo = log.replace('The PhIS Indent Number is: ', '').trim();
-                            return (
-                                <div key={i} style={{ marginBottom: '4px' }}>
-                                    The PhIS Indent Number is: <strong style={{ color: 'yellow' }}>{indentNo}</strong>
-                                    <Button 
-                                        size="small" 
-                                        style={{ marginLeft: 8, backgroundColor: '#333', color: 'white', borderColor: '#555' }} 
-                                        onClick={() => {
-                                            if (navigator.clipboard && window.isSecureContext) {
-                                                navigator.clipboard.writeText(indentNo).then(() => {
-                                                    message.success('Indent Number copied!');
-                                                }).catch(() => {
-                                                    message.error('Failed to copy. Please copy manually.');
-                                                });
-                                            } else {
-                                                const textArea = document.createElement("textarea");
-                                                textArea.value = indentNo;
-                                                
-                                                // Prevent scrolling and ensure it is focusable in the viewport
-                                                textArea.style.top = "0";
-                                                textArea.style.left = "0";
-                                                textArea.style.position = "fixed";
-                                                textArea.style.opacity = "0";
-                                                
-                                                document.body.appendChild(textArea);
-                                                textArea.focus();
-                                                textArea.select();
-                                                
-                                                try {
-                                                    const successful = document.execCommand('copy');
-                                                    if (successful) {
-                                                        message.success('Indent Number copied!');
-                                                    } else {
-                                                        message.error('Browser blocked copying. Please highlight and copy manually.');
-                                                    }
-                                                } catch (error) {
-                                                    console.error('Fallback copy failed', error);
-                                                    message.error('Failed to copy. Please copy manually.');
-                                                }
-                                                document.body.removeChild(textArea);
-                                            }
-                                        }}
-                                    >
-                                        Copy
-                                    </Button>
-                                </div>
-                            );
-                        }
-                        return <div key={i} style={{ marginBottom: '4px' }}>{log}</div>;
-                    })}
+                    {terminalLogs.map((log, i) => (
+                        <div key={i} style={{ marginBottom: '4px', color: log.startsWith('Error:') ? '#ff4d4f' : log.startsWith('The PhIS Indent Number is:') ? 'yellow' : 'inherit' }}>
+                            {log}
+                        </div>
+                    ))}
+                </div>
+            </Modal>
+
+            <Modal
+                title="PhIS Indent Created Successfully"
+                open={!!successIndentNo}
+                onCancel={() => setSuccessIndentNo(null)}
+                footer={[
+                    <Button key="close" onClick={() => setSuccessIndentNo(null)}>Close</Button>
+                ]}
+            >
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <Typography.Text type="success" style={{ fontSize: '16px' }}>
+                        The PhIS Indent Number is:
+                    </Typography.Text>
+                    <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px' }}>
+                        <Typography.Title level={3} style={{ margin: 0, color: '#1890ff' }}>
+                            {successIndentNo}
+                        </Typography.Title>
+                        <Button
+                            type="primary"
+                            icon={<CopyOutlined />}
+                            onClick={() => {
+                                if (navigator.clipboard && window.isSecureContext) {
+                                    navigator.clipboard.writeText(successIndentNo).then(() => {
+                                        message.success('Indent Number copied!');
+                                    }).catch(() => {
+                                        message.error('Failed to copy. Please copy manually.');
+                                    });
+                                } else {
+                                    const textArea = document.createElement("textarea");
+                                    textArea.value = successIndentNo;
+                                    textArea.style.position = "fixed";
+                                    textArea.style.opacity = "0";
+                                    document.body.appendChild(textArea);
+                                    textArea.focus();
+                                    textArea.select();
+                                    try {
+                                        const successful = document.execCommand('copy');
+                                        if (successful) {
+                                            message.success('Indent Number copied!');
+                                        } else {
+                                            message.error('Browser blocked copying. Please highlight and copy manually.');
+                                        }
+                                    } catch (err) {
+                                        message.error('Failed to copy. Please copy manually.');
+                                    }
+                                    document.body.removeChild(textArea);
+                                }
+                            }}
+                        >
+                            Copy
+                        </Button>
+                    </div>
                 </div>
             </Modal>
         </div >

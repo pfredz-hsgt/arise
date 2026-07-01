@@ -14,8 +14,8 @@ router.post('/register', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await pool.query(
-            'INSERT INTO users (email, password_hash, role, name) VALUES ($1, $2, $3, $4) RETURNING id, email, role, name',
-            [email, hashedPassword, role || 'Indenter', name]
+            'INSERT INTO users (email, password_hash, role, name, phis_username, phis_password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, role, name, phis_username, phis_password',
+            [email, hashedPassword, role || 'Indenter', name, req.body.phis_username || null, req.body.phis_password || null]
         );
         res.status(201).json({ user: result.rows[0] });
     } catch (err) {
@@ -142,10 +142,26 @@ router.post('/change-password', authenticateToken, async (req, res) => {
     }
 });
 
+// Update profile (name, phis_username, phis_password)
+router.put('/profile', authenticateToken, async (req, res) => {
+    const { name, phis_username, phis_password } = req.body;
+    try {
+        // We update name if provided, and always update phis_username/phis_password (even if empty string)
+        // using COALESCE for name, but direct assignment for phis fields to allow clearing them.
+        const result = await pool.query(
+            'UPDATE users SET name = COALESCE($1, name), phis_username = $2, phis_password = $3 WHERE id = $4 RETURNING id, email, name, role, phis_username, phis_password',
+            [name, phis_username, phis_password, req.user.id]
+        );
+        res.json({ success: true, user: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Get current user profile
 router.get('/me', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, email, role, name, created_at, must_change_password FROM users WHERE id = $1', [req.user.id]);
+        const result = await pool.query('SELECT id, email, role, name, phis_username, phis_password, created_at, must_change_password FROM users WHERE id = $1', [req.user.id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -159,7 +175,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 router.get('/users', authenticateToken, async (req, res) => {
     // Should check req.user.role === 'Issuer' ideally
     try {
-        const result = await pool.query('SELECT id, email, name, role FROM users ORDER BY name ASC');
+        const result = await pool.query('SELECT id, email, name, role, phis_username, phis_password FROM users ORDER BY name ASC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -167,11 +183,11 @@ router.get('/users', authenticateToken, async (req, res) => {
 });
 
 router.put('/users/:id', authenticateToken, async (req, res) => {
-    const { name, role } = req.body;
+    const { name, role, phis_username, phis_password } = req.body;
     try {
         const result = await pool.query(
-            'UPDATE users SET name = COALESCE($1, name), role = COALESCE($2, role) WHERE id = $3 RETURNING id, email, name, role',
-            [name, role, req.params.id]
+            'UPDATE users SET name = COALESCE($1, name), role = COALESCE($2, role), phis_username = COALESCE($3, phis_username), phis_password = COALESCE($4, phis_password) WHERE id = $5 RETURNING id, email, name, role, phis_username, phis_password',
+            [name, role, phis_username, phis_password, req.params.id]
         );
         res.json(result.rows[0]);
     } catch (err) {
