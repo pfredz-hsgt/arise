@@ -230,15 +230,54 @@ async function runPhisIndent(items, options = {}) {
         await page.waitForSelector('button.z-messagebox-button:has-text("OK")');
         await page.click('button.z-messagebox-button:has-text("OK")');
 
-        logCallback("Waiting for Indent Number to be generated...");
-        await page.waitForTimeout(3000);
+        logCallback("Sending for approval...");
+        await page.waitForTimeout(1500);
+
+        // Click on Send For Approval
+        await page.waitForSelector('button[_comp="button_IndentDialog_SendForApproval"]');
+        await page.click('button[_comp="button_IndentDialog_SendForApproval"]');
+        await page.waitForTimeout(1500);
+
+        // Confirmation: Are you sure want to send this record for approval?
+        await page.waitForSelector('button.z-messagebox-button:has-text("Yes")');
+        await page.click('button.z-messagebox-button:has-text("Yes")');
+        await page.waitForTimeout(1500);
+
+        // Info: Record has been sent for approval successfully
+        await page.waitForSelector('button.z-messagebox-button:has-text("OK")');
+        await page.click('button.z-messagebox-button:has-text("OK")');
+        await page.waitForTimeout(1500);
+
+        logCallback("Approving record...");
+
+        // Click on Approve button
+        await page.waitForSelector('button[_comp="button_IndentApprovalDialog_btnApprove"]');
+        await page.click('button[_comp="button_IndentApprovalDialog_btnApprove"]');
+        await page.waitForTimeout(1500);
+
+        // Confirmation: Are you sure you want to approve the record?
+        await page.waitForSelector('button.z-messagebox-button:has-text("Yes")');
+        await page.click('button.z-messagebox-button:has-text("Yes")');
+        await page.waitForTimeout(1500);
+
+        // Info: Record approved successfully.
+        await page.waitForSelector('button.z-messagebox-button:has-text("OK")');
+        await page.click('button.z-messagebox-button:has-text("OK")');
+        await page.waitForTimeout(2000);
+
+        logCallback("Retrieving Indent details...");
 
         try {
-            await page.waitForSelector('input[_comp="tb_IndentDialog_IndentNo"]', { timeout: 10000 });
-            const indentNo = await page.$eval('input[_comp="tb_IndentDialog_IndentNo"]', el => el.value);
+            await page.waitForSelector('input[_comp="tb_IndentApprovalDialog_IndentNo"]', { timeout: 10000 });
+            const indentNo = await page.$eval('input[_comp="tb_IndentApprovalDialog_IndentNo"]', el => el.value);
             logCallback(`The PhIS Indent Number is: ${indentNo}`);
+            
+            const indentDate = await page.$eval('input.z-datebox-input', el => el.value).catch(() => "");
+            if (indentDate) {
+                logCallback(`The PhIS Indent Date is: ${indentDate}`);
+            }
         } catch (e) {
-            logCallback("Could not retrieve the Indent Number automatically.");
+            logCallback("Could not retrieve the Indent details automatically.");
         }
 
         if (skippedItems.length > 0) {
