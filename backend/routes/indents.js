@@ -202,7 +202,7 @@ router.post('/phis-indent', authenticateToken, async (req, res) => {
     };
 
     const options = {
-        headless: true, // Set to false if you want to see it running, true in production
+        headless: false, // Set to false if you want to see it running, true in production
         username,
         password,
         logCallback,

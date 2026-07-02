@@ -115,6 +115,8 @@ async function runPhisIndent(items, options = {}) {
         await page.waitForSelector('button[_comp="button_IndentDialog_AddNewItem"]');
         await page.click('button[_comp="button_IndentDialog_AddNewItem"]');
 
+        const skippedItems = [];
+
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
             const { item_code, requested_qty, item_name } = item;
@@ -146,8 +148,18 @@ async function runPhisIndent(items, options = {}) {
 
             // dblclick on item from list (that has same code as entered previously)
             const rowSelector = `div.z-listbox-body table tr.z-listitem:has(div.z-listcell-content:has-text("${item_code}"))`;
-            await page.waitForSelector(rowSelector, { timeout: 30000 });
-            await page.dblclick(rowSelector);
+            try {
+                await page.waitForSelector(rowSelector, { timeout: 15000 });
+                await page.dblclick(rowSelector);
+            } catch (e) {
+                logCallback(`Skipping item due to error: ${item_code} ${item_name ? `(${item_name})` : ''} - Item not found or unable to be searched`);
+                skippedItems.push({ item_code, item_name, reason: "Item not found or search yielded no results" });
+                
+                // press escape to close the bandbox/search popup and reset for the next item
+                await page.keyboard.press('Escape');
+                await page.waitForTimeout(1000);
+                continue;
+            }
 
             // wait for the item details to load from the server and populate the default values
             await page.waitForTimeout(1500);
@@ -170,6 +182,30 @@ async function runPhisIndent(items, options = {}) {
 
             // wait a bit for save to register before proceeding to next item
             await page.waitForTimeout(2000);
+
+            // check if there is an error message about max storage quantity or back order warning
+            try {
+                // look for an OK button in a messagebox, which might indicate an error or warning
+                const okButtonSelector = 'button.z-messagebox-button:has-text("OK")';
+                const okButton = await page.$(okButtonSelector);
+                if (okButton) {
+                    const errorMsgSelector = 'div.z-messagebox span.z-label';
+                    const errorMsg = await page.$eval(errorMsgSelector, el => el.textContent).catch(() => "");
+                    if (errorMsg && errorMsg.includes("cannot be greater than")) {
+                        logCallback(`Skipping item due to error: ${item_code} ${item_name ? `(${item_name})` : ''} - Exceeds max storage quantity`);
+                        skippedItems.push({ item_code, item_name, reason: "Exceeds max storage quantity" });
+                        await page.click(okButtonSelector);
+                        await page.waitForTimeout(1000);
+                        continue;
+                    } else if (errorMsg && errorMsg.includes("back order quantities")) {
+                        logCallback(`Item ${item_code} ${item_name ? `(${item_name})` : ''} - Warning: Still have back order quantities. Proceeding.`);
+                        await page.click(okButtonSelector);
+                        await page.waitForTimeout(1000);
+                    }
+                }
+            } catch (e) {
+                // ignore if error handling fails, just proceed
+            }
         }
 
         logCallback("Finished adding all items. Closing the window...");
@@ -203,6 +239,10 @@ async function runPhisIndent(items, options = {}) {
             logCallback(`The PhIS Indent Number is: ${indentNo}`);
         } catch (e) {
             logCallback("Could not retrieve the Indent Number automatically.");
+        }
+
+        if (skippedItems.length > 0) {
+            logCallback("JSON_SKIPPED_ITEMS:" + JSON.stringify(skippedItems));
         }
 
         logCallback("Indent process completed successfully!");

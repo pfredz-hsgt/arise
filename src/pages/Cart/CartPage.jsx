@@ -52,6 +52,7 @@ const CartPage = () => {
     const [isTerminalVisible, setIsTerminalVisible] = useState(false);
     const [terminalLogs, setTerminalLogs] = useState([]);
     const [successIndentNo, setSuccessIndentNo] = useState(null);
+    const [skippedItems, setSkippedItems] = useState([]);
     const [activeSessionId, setActiveSessionId] = useState(null);
     const abortControllerRef = useRef(null);
 
@@ -185,6 +186,7 @@ const CartPage = () => {
 
         setIsTerminalVisible(true);
         setTerminalLogs(['Connecting to backend...']);
+        setSkippedItems([]);
         setActiveSessionId(session.id);
 
         abortControllerRef.current = new AbortController();
@@ -233,13 +235,23 @@ const CartPage = () => {
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n').filter(l => l.trim().length > 0);
                 if (lines.length > 0) {
-                    setTerminalLogs(prev => [...prev, ...lines]);
+                    const displayLines = lines.filter(l => !l.startsWith('JSON_SKIPPED_ITEMS:'));
+                    if (displayLines.length > 0) {
+                        setTerminalLogs(prev => [...prev, ...displayLines]);
+                    }
 
-                    // Check if indent number was returned
+                    // Check if indent number was returned or skipped items
                     for (const line of lines) {
                         if (line.startsWith('The PhIS Indent Number is: ')) {
                             const indentNo = line.replace('The PhIS Indent Number is: ', '').trim();
                             setSuccessIndentNo(indentNo);
+                        } else if (line.startsWith('JSON_SKIPPED_ITEMS:')) {
+                            try {
+                                const jsonStr = line.replace('JSON_SKIPPED_ITEMS:', '').trim();
+                                setSkippedItems(JSON.parse(jsonStr));
+                            } catch (e) {
+                                console.error('Failed to parse skipped items', e);
+                            }
                         }
                     }
                 }
@@ -867,6 +879,32 @@ const CartPage = () => {
                             Copy
                         </Button>
                     </div>
+
+                    {skippedItems.length > 0 && (
+                        <div style={{ marginTop: '32px', textAlign: 'left', background: '#fff1f0', padding: '16px', borderRadius: '8px', border: '1px solid #ffa39e' }}>
+                            <Typography.Title level={5} style={{ color: '#cf1322', marginTop: 0 }}>
+                                <ExclamationCircleOutlined style={{ marginRight: '8px' }} />
+                                Items Skipped (Action Required)
+                            </Typography.Title>
+                            <Typography.Text type="secondary" style={{ display: 'block', marginBottom: '12px' }}>
+                                The following items were not indented and require manual action:
+                            </Typography.Text>
+                            <List
+                                size="small"
+                                dataSource={skippedItems}
+                                renderItem={item => (
+                                    <List.Item>
+                                        <div>
+                                            <Typography.Text strong>{item.item_code}</Typography.Text>
+                                            {item.item_name && ` (${item.item_name})`}
+                                            <br />
+                                            <Typography.Text type="danger">{item.reason}</Typography.Text>
+                                        </div>
+                                    </List.Item>
+                                )}
+                            />
+                        </div>
+                    )}
                 </div>
             </Modal>
         </div >
