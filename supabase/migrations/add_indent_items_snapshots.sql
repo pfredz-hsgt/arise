@@ -1,3 +1,0 @@
-ALTER TABLE indent_items
-ADD COLUMN IF NOT EXISTS snapshot_max_qty INTEGER,
-ADD COLUMN IF NOT EXISTS snapshot_balance INTEGER;
