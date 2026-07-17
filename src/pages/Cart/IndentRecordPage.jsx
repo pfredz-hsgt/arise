@@ -55,7 +55,22 @@ const IndentRecordPage = () => {
             const { usersData, sessionsData, requestsData } = await api.get('/indents/records');
             if (usersData) setUsers(usersData);
 
-            let processedSessions = sessionsData || [];
+            let processedSessions = (sessionsData || []).map(sess => {
+                const uniqueItemsMap = new Map();
+                sess.indent_items?.forEach(item => {
+                    if (!uniqueItemsMap.has(item.item_id)) {
+                        uniqueItemsMap.set(item.item_id, { ...item });
+                    } else {
+                        uniqueItemsMap.get(item.item_id).requested_qty += item.requested_qty;
+                    }
+                });
+                
+                const sortedItems = Array.from(uniqueItemsMap.values())
+                    .filter(item => item.requested_qty >= 0)
+                    .sort((a, b) => (a.inventory_items?.name || '').localeCompare(b.inventory_items?.name || ''));
+                
+                return { ...sess, indent_items: sortedItems };
+            });
 
             if (requestsData && requestsData.length > 0) {
                 // Group requests by user and date (YYYY-MM-DD)
@@ -75,15 +90,22 @@ const IndentRecordPage = () => {
                             items: []
                         };
                     }
-                    // Add item
-                    acc[key].items.push({
-                        id: req.id,
-                        requested_qty: req.requested_qty,
-                        snapshot_max_qty: req.snapshot_max_qty,
-                        snapshot_balance: req.snapshot_balance,
-                        indent_remarks: req.indent_remarks,
-                        inventory_items: req.inventory_items
-                    });
+                    // Add item (deduplicated)
+                    const existingItemIndex = acc[key].items.findIndex(i => i.item_id === req.inventory_items?.id);
+                    if (existingItemIndex > -1) {
+                        acc[key].items[existingItemIndex].requested_qty += req.requested_qty;
+                    } else {
+                        acc[key].items.push({
+                            id: req.id,
+                            item_id: req.inventory_items?.id,
+                            requested_qty: req.requested_qty,
+                            snapshot_max_qty: req.snapshot_max_qty,
+                            snapshot_balance: req.snapshot_balance,
+                            indent_remarks: req.indent_remarks,
+                            inventory_items: req.inventory_items
+                        });
+                    }
+                    
                     // For the group status, if any is 'Approved' keep it, else it will be the status of the item
                     if (req.status === 'Approved') {
                         acc[key].status = 'Approved';
@@ -193,57 +215,92 @@ const IndentRecordPage = () => {
     };
 
     const generatePDFDocument = (session) => {
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'portrait' });
         const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        let yPosition = 15;
+        let yPosition = 10;
 
         // Header
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'italic');
-        doc.text('Pekeliling Perbendaharaan Malaysia', 7, yPosition);
+        doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
-        doc.text('AM 6.5 LAMPIRAN B', pageWidth / 2, yPosition, { align: 'center' });
-        doc.text('KEW.PS-8', pageWidth - 7, yPosition, { align: 'right' });
-        yPosition += 10;
+        doc.text('Pekeliling Perbendaharaan Malaysia', 10, yPosition);
+        doc.text('AM 6.5 Lampiran B', pageWidth - 10, yPosition, { align: 'right' });
+        yPosition += 5;
+
+        // Top Right
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('KEW.PS-8', pageWidth - 10, yPosition, { align: 'right' });
+        yPosition += 5;
+        doc.setFont(undefined, 'normal');
+        doc.text('No. BPSI : .........', pageWidth - 10, yPosition, { align: 'right' });
+        yPosition += 5;
 
         // Title
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
-        let title = `BORANG PERMOHONAN STOK UBAT (${session.session_type})`;
-        if (session.rak) title += ` - RAK ${session.rak}`;
-        doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
-
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        yPosition += 7;
+        doc.text('BORANG PERMOHONAN STOK', pageWidth / 2, yPosition, { align: 'center' });
+        yPosition += 5;
+        doc.text('(INDIVIDU KEPADA STOR)', pageWidth / 2, yPosition, { align: 'center' });
         yPosition += 5;
 
-        const tableData = session.indent_items.map((item, idx) => [
-            (idx + 1).toString(),
+        const itemsToPrint = session.isAdhocRequests ? session.items : session.indent_items;
+
+        const tableData = (itemsToPrint || []).map((item) => [
+            '', // No Kod
             (item.inventory_items?.name || '') + (item.inventory_items?.pku ? ` (${item.inventory_items.pku})` : ''),
             item.requested_qty || 0,
             item.indent_remarks || '',
+            '', // Baki Sedia Ada
             '', // Kuantiti Diluluskan
             '', // Catatan
+            '', // Kuantiti Diterima
+            '', // Catatan
+        ]);
+
+        // Add Signatures Row
+        tableData.push([
+            {
+                content: `Pemohon:\n\n\n\n..............................\n(Tandatangan)\n\nNama: ${session.profiles?.name || ''}\nJawatan:\nTarikh: ${dayjs(session.created_at).format('DD/MM/YYYY')}`,
+                colSpan: 4,
+                styles: { minCellHeight: 35, halign: 'left', valign: 'top', fillColor: [255, 255, 255], fontStyle: 'normal', fontSize: 9 }
+            },
+            {
+                content: `Pegawai Pelulus:\n\n\n\n.........................\n(Tandatangan)\n\nNama:\nJawatan:\nTarikh:`,
+                colSpan: 3,
+                styles: { minCellHeight: 35, halign: 'left', valign: 'top', fillColor: [255, 255, 255], fontStyle: 'normal', fontSize: 9 }
+            },
+            {
+                content: `Pemohon/ Wakil:\n\n\n..........................\n(Tandatangan)\n\nNama:\nJawatan:\nTarikh:`,
+                colSpan: 2,
+                styles: { minCellHeight: 35, halign: 'left', valign: 'top', fillColor: [255, 255, 255], fontStyle: 'normal', fontSize: 9 }
+            }
         ]);
 
         autoTable(doc, {
             startY: yPosition,
-            head: [[
-                { content: 'Bil', styles: { halign: 'center' } },
-                { content: 'Perihal stok', styles: { halign: 'center' } },
-                { content: 'Kuantiti \nDipohon', styles: { halign: 'center' } },
-                { content: 'Catatan', styles: { halign: 'center' } },
-                { content: 'Kuantiti \nDiluluskan', styles: { halign: 'center' } },
-                { content: 'Catatan', styles: { halign: 'center' } },
-            ]],
+            rowPageBreak: 'avoid',
+            head: [
+                [
+                    { content: 'Permohonan', colSpan: 4, styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 9 } },
+                    { content: 'Pegawai Pelulus', colSpan: 3, styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 6.5 } },
+                    { content: 'Perakuan Penerimaan', colSpan: 2, styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 6.5 } },
+                ],
+                [
+                    { content: 'No.\nKod', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 8 } },
+                    { content: 'Perihal Stok', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 9 } },
+                    { content: 'Kuantiti\nDimohon', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 8 } },
+                    { content: 'Catatan', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 9 } },
+                    { content: 'Baki Sedia\nAda', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 6.5 } },
+                    { content: 'Kuantiti\nDiluluskan', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 6.5 } },
+                    { content: 'Catatan', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 6.5 } },
+                    { content: 'Kuantiti\nDiterima', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 6.5 } },
+                    { content: 'Catatan', styles: { halign: 'center', fillColor: [230, 230, 230], fontSize: 6.5 } },
+                ]
+            ],
             body: tableData,
             theme: 'grid',
-            styles: { fontSize: 10, cellPadding: 3 },
+            styles: { cellPadding: 1.3, textColor: [0, 0, 0], valign: 'middle' },
             headStyles: {
-                fillColor: [255, 255, 255],
-                textColor: [0, 0, 0],
                 fontStyle: 'bold',
                 lineWidth: 0.2,
                 lineColor: [0, 0, 0],
@@ -251,48 +308,37 @@ const IndentRecordPage = () => {
             bodyStyles: {
                 lineWidth: 0.2,
                 lineColor: [0, 0, 0],
-                minCellHeight: 9,
+                minCellHeight: 8,
             },
             columnStyles: {
-                0: { cellWidth: 11, halign: 'center' },
-                1: { cellWidth: 70 },
-                2: { cellWidth: 25, halign: 'center' },
-                3: { cellWidth: 32 },
-                4: { cellWidth: 25, halign: 'center' },
-                5: { cellWidth: 32 },
+                0: { cellWidth: 8, halign: 'center', fontSize: 8 },
+                1: { cellWidth: 'auto', fontSize: 9.5, minCellHeight: 10 },
+                2: { cellWidth: 15, halign: 'center', fontSize: 9.5 },
+                3: { cellWidth: 18, fontSize: 8 },
+                4: { cellWidth: 12, halign: 'center', fontSize: 6.5 },
+                5: { cellWidth: 12, halign: 'center', fontSize: 6.5 },
+                6: { cellWidth: 14, fontSize: 6.5 },
+                7: { cellWidth: 12, halign: 'center', fontSize: 6.5 },
+                8: { cellWidth: 14, fontSize: 6.5 },
             },
-            margin: { bottom: 50, left: 7, right: 7 },
+            margin: { left: 10, right: 10 },
             didDrawCell: function (data) {
-                if (data.column.index === 4) {
+                let rightEdge = false;
+                if (data.section === 'head' && data.row.index === 0) {
+                    if (data.column.index === 0 || data.column.index === 4) rightEdge = true;
+                } else if (data.section === 'body' && data.row.index === tableData.length - 1) {
+                    if (data.column.index === 0 || data.column.index === 4) rightEdge = true;
+                } else {
+                    if (data.column.index === 3 || data.column.index === 6) rightEdge = true;
+                }
+
+                if (rightEdge) {
                     doc.setLineWidth(0.8);
-                    doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
-                    doc.setLineWidth(0.2);
+                    doc.line(data.cell.x + data.cell.width, data.cell.y, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+                    doc.setLineWidth(0.2); // reset
                 }
             },
         });
-
-        // Signatures
-        const finalY = pageHeight - 50;
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-
-        const leftX = 15;
-        doc.text('Pemohon', leftX, finalY);
-        doc.text('(Tandatangan)', leftX, finalY + 15);
-        doc.text('Nama : ' + (session.profiles?.name || ''), leftX, finalY + 20);
-        doc.text(`Tarikh: ${dayjs(session.created_at).format('DD/MM/YYYY')}`, leftX, finalY + 25);
-
-        const middleX = pageWidth / 2 - 20;
-        doc.text('Pegawai Pelulus', middleX, finalY);
-        doc.text('(Tandatangan)', middleX, finalY + 15);
-        doc.text('Nama :', middleX, finalY + 20);
-        doc.text('Tarikh :', middleX, finalY + 25);
-
-        const rightX = pageWidth - 60;
-        doc.text('Penerima', rightX, finalY);
-        doc.text('(Tandatangan)', rightX, finalY + 15);
-        doc.text('Nama :  ', rightX, finalY + 20);
-        doc.text('Tarikh :', rightX, finalY + 25);
 
         return doc;
     };
@@ -322,10 +368,21 @@ const IndentRecordPage = () => {
 
                 if (items.length === 0) return;
 
+                // Deduplicate items
+                const uniqueItemsMap = new Map();
+                items.forEach(item => {
+                    const itemId = item.item_id || item.inventory_items?.id;
+                    if (!uniqueItemsMap.has(itemId)) {
+                        uniqueItemsMap.set(itemId, { ...item });
+                    } else {
+                        uniqueItemsMap.get(itemId).requested_qty += item.requested_qty;
+                    }
+                });
+
                 // Sort items alphabetically
-                const sortedItems = [...items].sort((a, b) =>
-                    (a.inventory_items?.name || '').localeCompare(b.inventory_items?.name || '')
-                );
+                const sortedItems = Array.from(uniqueItemsMap.values())
+                    .filter(item => item.requested_qty >= 0)
+                    .sort((a, b) => (a.inventory_items?.name || '').localeCompare(b.inventory_items?.name || ''));
 
                 const sessionWithItems = { ...session, indent_items: sortedItems };
                 const doc = generatePDFDocument(sessionWithItems);
