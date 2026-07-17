@@ -67,10 +67,19 @@ const CartPage = () => {
             // Fetch sessions that are "Submitted" (Pending Issuer Action)
             const { sessionsData, requestsData } = await api.get('/indents/cart');
 
-            // Sort items inside each session alphabetically
+            // Sort and deduplicate items inside each session
             const processedSessions = (sessionsData || [])
                 .map(sess => {
-                    const sortedItems = [...sess.indent_items]
+                    const uniqueItemsMap = new Map();
+                    sess.indent_items.forEach(item => {
+                        if (!uniqueItemsMap.has(item.item_id)) {
+                            uniqueItemsMap.set(item.item_id, { ...item });
+                        } else {
+                            uniqueItemsMap.get(item.item_id).requested_qty += item.requested_qty;
+                        }
+                    });
+
+                    const sortedItems = Array.from(uniqueItemsMap.values())
                         .filter(item => item.requested_qty >= 0)
                         .sort((a, b) =>
                             (a.inventory_items?.name || '').localeCompare(b.inventory_items?.name || '')
@@ -93,19 +102,29 @@ const CartPage = () => {
 
                 // Create a session for each group
                 Object.entries(groupedRequests).forEach(([profileName, reqs], index) => {
-                    const mappedItems = reqs.map(req => ({
-                        id: `req-${req.id}`,
-                        original_req_id: req.id,
-                        item_id: req.inventory_items?.id,
-                        requested_qty: req.requested_qty,
-                        snapshot_max_qty: req.snapshot_max_qty,
-                        snapshot_balance: req.snapshot_balance,
-                        indent_remarks: req.indent_remarks,
-                        inventory_items: req.inventory_items,
-                        created_at: req.created_at
-                    })).sort((a, b) =>
-                        (a.inventory_items?.name || '').localeCompare(b.inventory_items?.name || '')
-                    );
+                    const uniqueMappedItems = new Map();
+                    reqs.forEach(req => {
+                        if (!uniqueMappedItems.has(req.item_id)) {
+                            uniqueMappedItems.set(req.item_id, {
+                                id: `req-${req.id}`,
+                                original_req_id: req.id,
+                                item_id: req.inventory_items?.id,
+                                requested_qty: req.requested_qty,
+                                snapshot_max_qty: req.snapshot_max_qty,
+                                snapshot_balance: req.snapshot_balance,
+                                indent_remarks: req.indent_remarks,
+                                inventory_items: req.inventory_items,
+                                created_at: req.created_at
+                            });
+                        } else {
+                            uniqueMappedItems.get(req.item_id).requested_qty += req.requested_qty;
+                        }
+                    });
+
+                    const mappedItems = Array.from(uniqueMappedItems.values())
+                        .sort((a, b) =>
+                            (a.inventory_items?.name || '').localeCompare(b.inventory_items?.name || '')
+                        );
 
                     processedSessions.push({
                         id: `adhoc-requests-${profileName}-${index}`, // Make id unique per group

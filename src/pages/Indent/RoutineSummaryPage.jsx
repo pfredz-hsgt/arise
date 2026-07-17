@@ -160,7 +160,7 @@ const RoutineSummaryPage = () => {
                 }));
 
             if (mockItemsToInsert.length > 0) {
-                await Promise.all(mockItemsToInsert.map(item => api.post('/indent_items', item)));
+                await api.post('/indent_items/bulk', { items: mockItemsToInsert });
             }
 
             await api.put(`/indent_sessions/${sessionData.id}`, { status: 'Submitted' });

@@ -59,6 +59,42 @@ router.get('/shortexp/:item_id', authenticateToken, async (req, res) => {
     }
 });
 
+// Bulk create items
+router.post('/bulk', authenticateToken, async (req, res) => {
+    const { items } = req.body;
+    if (!items || items.length === 0) {
+        return res.status(400).json({ error: 'No items provided' });
+    }
+
+    try {
+        const values = [];
+        const placeholders = [];
+        let paramIndex = 1;
+
+        items.forEach((item) => {
+            placeholders.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+            values.push(
+                item.session_id, item.item_id, item.requested_qty, item.indent_remarks || null, 
+                item.snapshot_max_qty || 0, item.snapshot_balance || 0,
+                item.batch_no_1 || null, item.exp_date_1 || null, item.short_qty_1 || 0,
+                item.batch_no_2 || null, item.exp_date_2 || null, item.short_qty_2 || 0
+            );
+        });
+
+        const query = `
+            INSERT INTO indent_items (
+                session_id, item_id, requested_qty, indent_remarks, snapshot_max_qty, snapshot_balance,
+                batch_no_1, exp_date_1, short_qty_1, batch_no_2, exp_date_2, short_qty_2
+            ) VALUES ${placeholders.join(', ')}
+        `;
+
+        await pool.query(query, values);
+        res.status(201).json({ success: true, count: items.length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Create item
 router.post('/', authenticateToken, async (req, res) => {
     const data = req.body;

@@ -175,15 +175,10 @@ const RoutineIndentPage = () => {
             // check if row already exists
             const existing = await api.get(`/indent_items?session_id=${sessionId}&item_id=${currentItem.id}`);
 
-            if (currentQty > 0) {
-                if (existing) {
-                    await api.put(`/indent_items/${existing.id}`, upsertData);
-                } else {
-                    await api.post('/indent_items', upsertData);
-                }
-            } else if (existing) {
-                // If quantity is 0, remove it from the draft session
-                await api.delete(`/indent_items/${existing.id}`);
+            if (existing) {
+                await api.put(`/indent_items/${existing.id}`, upsertData);
+            } else {
+                await api.post('/indent_items', upsertData);
             }
 
             // Save max_qty and balance if they were adjusted
