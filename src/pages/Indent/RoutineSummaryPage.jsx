@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Table, Button, message, InputNumber, Card, Space, Tag, Modal, Spin, Grid, List, Affix } from 'antd';
+import { Typography, Table, Button, message, InputNumber, Card, Space, Tag, Modal, Spin, Grid, List, Affix, Progress } from 'antd';
 import { SendOutlined, ExclamationCircleOutlined, UnorderedListOutlined, TableOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
@@ -228,10 +228,14 @@ const RoutineSummaryPage = () => {
             return;
         }
 
-        const firstZeroItem = indentItems.find(item => item.requested_qty === 0 || !item.requested_qty);
         let url = `/routine-indent?rak=${sessionData.rak}`;
-        if (firstZeroItem) {
-            url += `&resumeItemId=${firstZeroItem.item_id}`;
+        if (sessionData.last_item) {
+            url += `&resumeItemId=${sessionData.last_item}`;
+        } else {
+            const firstZeroItem = indentItems.find(item => item.requested_qty === 0 || !item.requested_qty);
+            if (firstZeroItem) {
+                url += `&resumeItemId=${firstZeroItem.item_id}`;
+            }
         }
 
         navigate(url);
@@ -243,7 +247,11 @@ const RoutineSummaryPage = () => {
 
     const renderListItem = (record) => (
         <List.Item>
-            <Card size="small" style={{ width: '100%', borderColor: record.requested_qty > 0 ? '#00df43ff' : undefined }}>
+            <Card size="small" style={{
+                width: '100%',
+                borderColor: record.requested_qty > 0 ? '#00df43ff' : undefined,
+                backgroundColor: record.item_id === sessionData?.last_item ? '#ffecd7ff' : undefined
+            }}>
                 <div style={{ marginBottom: '8px' }}>
                     <Text strong>{record.inventory_items?.name}</Text>
                     {record.inventory_items?.pku && (
@@ -270,12 +278,32 @@ const RoutineSummaryPage = () => {
         </List.Item>
     );
 
+    const lastItemIndex = sessionData?.last_item
+        ? indentItems.findIndex(i => i.item_id === sessionData.last_item)
+        : -1;
+    const progressPercent = indentItems.length > 0
+        ? Math.round(((lastItemIndex >= 0 ? lastItemIndex + 1 : 0) / indentItems.length) * 100)
+        : 0;
+
     return (
         <div>
+            <style>{`
+                .highlight-row > td { background-color: #fff1e6ff !important; }
+            `}</style>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
                 <div>
                     <Title level={3} style={{ margin: 0 }}>Indent Summary</Title>
                     <Text type="secondary">Created by: {profile?.name} at {dayjs(sessionData?.created_at).format('DD/MM/YYYY HH:mm:ss')}</Text>
+                    {indentItems.length > 0 && (
+                        <div style={{ marginTop: 8, maxWidth: 300 }}>
+                            <Progress percent={progressPercent} size="small" />
+                            {lastItemIndex >= 0 && (
+                                <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>
+                                    Stopped at item {lastItemIndex + 1} of {indentItems.length}
+                                </Text>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <Space wrap style={{ alignItems: 'center' }}>
                     {sessionData?.rak && (
@@ -309,6 +337,7 @@ const RoutineSummaryPage = () => {
                         rowKey="id"
                         pagination={false}
                         scroll={{ y: 500 }}
+                        rowClassName={(record) => record.item_id === sessionData?.last_item ? 'highlight-row' : ''}
                     />
                 ) : (
                     <List

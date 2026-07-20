@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS indent_sessions (
   session_type TEXT,
   status TEXT DEFAULT 'Draft',
   rak TEXT,
+  last_item UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

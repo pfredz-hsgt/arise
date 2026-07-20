@@ -172,7 +172,10 @@ const IndentRecordPage = () => {
             title: 'Date',
             dataIndex: 'created_at',
             key: 'created_at',
-            render: (text) => dayjs(text).format('DD/MM/YYYY HH:mm'),
+            render: (text, record) => {
+                const itemCount = record.isAdhocRequests ? (record.items?.length || 0) : (record.indent_items?.length || 0);
+                return `${dayjs(text).format('DD/MM/YYYY HH:mm')} (${itemCount} items)`;
+            },
             sorter: (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix(),
         },
         {
@@ -339,6 +342,15 @@ const IndentRecordPage = () => {
                 }
             },
         });
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            const pageHeight = doc.internal.pageSize.getHeight();
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
 
         return doc;
     };

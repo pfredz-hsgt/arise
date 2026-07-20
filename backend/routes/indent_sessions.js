@@ -43,11 +43,11 @@ router.post('/', authenticateToken, async (req, res) => {
 
 // Update session
 router.put('/:id', authenticateToken, async (req, res) => {
-    const { rak, status } = req.body;
+    const { rak, status, last_item } = req.body;
     try {
         const result = await pool.query(
-            'UPDATE indent_sessions SET rak = COALESCE($1, rak), status = COALESCE($2, status) WHERE id = $3 RETURNING *',
-            [rak, status, req.params.id]
+            'UPDATE indent_sessions SET rak = COALESCE($1, rak), status = COALESCE($2, status), last_item = COALESCE($3, last_item) WHERE id = $4 RETURNING *',
+            [rak, status, last_item, req.params.id]
         );
         res.json(result.rows[0]);
     } catch (err) {

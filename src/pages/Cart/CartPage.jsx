@@ -463,7 +463,49 @@ const CartPage = () => {
             },
         });
 
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            const pageHeight = doc.internal.pageSize.getHeight();
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
+
         return doc;
+    };
+
+    const previewSingleSessionPDF = (session) => {
+        try {
+            const doc = generatePDFDocument(session);
+            const timestamp = dayjs(session.created_at).format('YYYYMMDD_HHmm');
+            const filename = `Indent_${timestamp}.pdf`;
+
+            doc.setProperties({ title: filename });
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+                newWindow.document.title = filename;
+                newWindow.document.body.style.margin = '0';
+                newWindow.document.body.style.overflow = 'hidden';
+
+                const iframe = newWindow.document.createElement('iframe');
+                iframe.src = pdfUrl;
+                iframe.style.width = '100vw';
+                iframe.style.height = '100vh';
+                iframe.style.border = 'none';
+                iframe.title = filename;
+
+                newWindow.document.body.appendChild(iframe);
+            } else {
+                window.open(pdfUrl, '_blank');
+            }
+        } catch (error) {
+            console.error('Error previewing single PDF:', error);
+            message.error('Failed to preview PDF');
+        }
     };
 
     const processPDFExport = (mode) => {
@@ -583,26 +625,26 @@ const CartPage = () => {
                                             >
                                                 Indent PhIS
                                             </Button>
-                                            <Popconfirm
-                                                title="Clear this session?"
-                                                description="Mark this indent as approved and processed?"
-                                                onConfirm={(e) => {
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                icon={<CheckCircleOutlined />}
+                                                onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleClearSession(session.id);
+                                                    Modal.confirm({
+                                                        title: 'Do you want to Approve and Clear this indent?',
+                                                        content: 'Kew.PS-8 will be automatically generated and opened',
+                                                        okText: 'Approve',
+                                                        cancelText: 'Cancel',
+                                                        onOk: () => {
+                                                            previewSingleSessionPDF(session);
+                                                            handleClearSession(session.id);
+                                                        }
+                                                    });
                                                 }}
-                                                onCancel={(e) => e.stopPropagation()}
-                                                okText="Yes"
-                                                cancelText="No"
                                             >
-                                                <Button
-                                                    size="small"
-                                                    type="primary"
-                                                    icon={<CheckCircleOutlined />}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    Approve & Clear
-                                                </Button>
-                                            </Popconfirm>
+                                                Approve & Clear
+                                            </Button>
                                         </Space>
                                     </div>
                                 }

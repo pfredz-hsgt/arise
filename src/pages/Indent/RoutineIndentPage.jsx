@@ -212,6 +212,7 @@ const RoutineIndentPage = () => {
             if (currentIndex < items.length - 1) {
                 const nextIndex = currentIndex + 1;
                 setCurrentIndex(nextIndex);
+                api.put(`/indent_sessions/${sessionId}`, { last_item: items[nextIndex].id }).catch(console.error);
                 await loadItemData(items[nextIndex].id, sessionId);
             } else {
                 // Done! Navigate to summary
@@ -225,6 +226,7 @@ const RoutineIndentPage = () => {
         if (success && currentIndex > 0) {
             const prevIndex = currentIndex - 1;
             setCurrentIndex(prevIndex);
+            api.put(`/indent_sessions/${sessionId}`, { last_item: items[prevIndex].id }).catch(console.error);
             await loadItemData(items[prevIndex].id, sessionId);
         }
     };
