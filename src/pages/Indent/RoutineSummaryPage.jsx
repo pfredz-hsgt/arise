@@ -26,7 +26,10 @@ const RoutineSummaryPage = () => {
     }, [isDesktop]);
 
     useEffect(() => {
-        fetchSummaryData();
+        const timer = setTimeout(() => {
+            fetchSummaryData();
+        }, 500);
+        return () => clearTimeout(timer);
     }, []);
 
     const fetchSummaryData = async () => {
