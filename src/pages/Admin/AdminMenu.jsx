@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Tabs, Table, Button, Modal, Form, Input, Select, message, Popconfirm, Card, Spin, Space } from 'antd';
+import { Typography, Tabs, Table, Button, Modal, Form, Input, Select, message, Popconfirm, Card, Spin, Space, Switch, Tag } from 'antd';
 import { UserOutlined, DatabaseOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
@@ -135,9 +135,11 @@ const UserManagement = () => {
         try {
             await api.put(`/auth/users/${editingUser.id}`, {
                 name: values.name,
+                email: values.email,
                 role: values.role,
                 phis_username: values.phis_username,
-                phis_password: values.phis_password
+                phis_password: values.phis_password,
+                is_active: values.is_active
             });
 
             message.success("User updated successfully");
@@ -157,45 +159,28 @@ const UserManagement = () => {
         try {
             await api.delete(`/auth/users/${user.id}`);
             message.success("User removed");
+            setIsEditModalVisible(false);
+            setEditingUser(null);
             fetchUsers();
         } catch (error) {
             message.error("Failed to delete user");
         }
     };
 
+    const handleResetPassword = async (user) => {
+        try {
+            await api.post(`/auth/users/${user.id}/reset-password`);
+            message.success("Password reset to F@rmasi.1234");
+        } catch (error) {
+            message.error("Failed to reset password");
+        }
+    };
+
     const columns = [
         { title: 'Name', dataIndex: 'name', key: 'name' },
         { title: 'Email', dataIndex: 'email', key: 'email' },
-        { title: 'Role', dataIndex: 'role', key: 'role', render: text => <span style={{ color: text === 'Issuer' ? '#1890ff' : '#52c41a' }}>{text}</span> },
-        {
-            title: 'Actions',
-            key: 'actions',
-            render: (_, record) => (
-                <Space>
-                    <Button
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => {
-                            setEditingUser(record);
-                            editForm.setFieldsValue({
-                                name: record.name,
-                                email: record.email,
-                                role: record.role,
-                                phis_username: record.phis_username,
-                                phis_password: record.phis_password
-                            });
-                            setIsEditModalVisible(true);
-                        }}
-                    />
-                    <Popconfirm
-                        title="Delete user profile?"
-                        onConfirm={() => handleDeleteUser(record)}
-                    >
-                        <Button danger icon={<DeleteOutlined />} size="small" />
-                    </Popconfirm>
-                </Space>
-            )
-        }
+        { title: 'Role', dataIndex: 'role', key: 'role', render: text => <Tag color={text === 'Issuer' ? 'blue' : 'green'}>{text}</Tag> },
+        { title: 'Status', dataIndex: 'is_active', key: 'is_active', render: (isActive) => <Tag color={isActive === false ? 'error' : 'success'}>{isActive === false ? 'Inactive' : 'Active'}</Tag> }
     ];
 
     if (loading) return <Spin />;
@@ -206,7 +191,28 @@ const UserManagement = () => {
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>New User</Button>
             </div>
 
-            <Table columns={columns} dataSource={users} rowKey="id" pagination={{ pageSize: 10 }} scroll={{ x: 'max-content' }} />
+            <Table 
+                columns={columns} 
+                dataSource={users} 
+                rowKey="id" 
+                pagination={{ pageSize: 10 }} 
+                scroll={{ x: 'max-content' }} 
+                onRow={(record) => ({
+                    onClick: () => {
+                        setEditingUser(record);
+                        editForm.setFieldsValue({
+                            name: record.name,
+                            email: record.email,
+                            role: record.role,
+                            phis_username: record.phis_username,
+                            phis_password: record.phis_password,
+                            is_active: record.is_active !== false
+                        });
+                        setIsEditModalVisible(true);
+                    },
+                    style: { cursor: 'pointer' }
+                })}
+            />
 
             <Modal
                 title="Create New User"
@@ -256,8 +262,8 @@ const UserManagement = () => {
                     <Form.Item name="name" label="Name" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="email" label="Email">
-                        <Input disabled />
+                    <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
+                        <Input />
                     </Form.Item>
                     <Form.Item name="phis_username" label="PHIS Username">
                         <Input />
@@ -271,8 +277,27 @@ const UserManagement = () => {
                             <Option value="Issuer">Issuer (Admin)</Option>
                         </Select>
                     </Form.Item>
+                    <Form.Item name="is_active" label="Active Status" valuePropName="checked">
+                        <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+                    </Form.Item>
                     <Form.Item>
-                        <Button type="primary" htmlType="submit" loading={submitting} block>Update User</Button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <Button type="primary" htmlType="submit" loading={submitting} block>Update User</Button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <Popconfirm
+                                    title="Reset password to default (F@rmasi.1234)?"
+                                    onConfirm={() => handleResetPassword(editingUser)}
+                                >
+                                    <Button style={{ flex: 1 }}>Reset Password</Button>
+                                </Popconfirm>
+                                <Popconfirm
+                                    title="Delete user profile?"
+                                    onConfirm={() => handleDeleteUser(editingUser)}
+                                >
+                                    <Button danger icon={<DeleteOutlined />} style={{ flex: 1 }}>Delete</Button>
+                                </Popconfirm>
+                            </div>
+                        </div>
                     </Form.Item>
                 </Form>
             </Modal>

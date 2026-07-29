@@ -322,27 +322,31 @@ const MainLayout = () => {
                     layout="vertical"
                     onFinish={handleUpdateProfile}
                 >
-                    <Form.Item
-                        name="name"
-                        label="Name"
-                        rules={[{ required: !isForcedChange, message: 'Please input your name' }]}
-                    >
-                        <Input placeholder="Enter your name" />
-                    </Form.Item>
-                    
-                    <Form.Item
-                        name="phis_username"
-                        label="PHIS Username"
-                    >
-                        <Input placeholder="Enter PHIS username" />
-                    </Form.Item>
+                    {!isForcedChange && (
+                        <>
+                            <Form.Item
+                                name="name"
+                                label="Name"
+                                rules={[{ required: true, message: 'Please input your name' }]}
+                            >
+                                <Input placeholder="Enter your name" />
+                            </Form.Item>
+                            
+                            <Form.Item
+                                name="phis_username"
+                                label="PHIS Username"
+                            >
+                                <Input placeholder="Enter PHIS username" />
+                            </Form.Item>
 
-                    <Form.Item
-                        name="phis_password"
-                        label="PHIS Password"
-                    >
-                        <Input.Password placeholder="Enter PHIS password" />
-                    </Form.Item>
+                            <Form.Item
+                                name="phis_password"
+                                label="PHIS Password"
+                            >
+                                <Input.Password placeholder="Enter PHIS password" />
+                            </Form.Item>
+                        </>
+                    )}
 
                     <Form.Item
                         name="newPassword"

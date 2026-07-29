@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT DEFAULT 'Indenter' CHECK (role IN ('Issuer', 'Indenter')),
   phis_username TEXT,
   phis_password TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
