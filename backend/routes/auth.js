@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import pool from '../db.js';
+import { encrypt, decrypt } from '../utils/crypto.js';
 
 const router = express.Router();
 
@@ -13,11 +14,16 @@ router.post('/register', async (req, res) => {
     const { email, password, role, name } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
+        const encryptedPhisPassword = req.body.phis_password ? encrypt(req.body.phis_password) : null;
         const result = await pool.query(
             'INSERT INTO users (email, password_hash, role, name, phis_username, phis_password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, role, name, phis_username, phis_password',
-            [email, hashedPassword, role || 'Indenter', name, req.body.phis_username || null, req.body.phis_password || null]
+            [email, hashedPassword, role || 'Indenter', name, req.body.phis_username || null, encryptedPhisPassword]
         );
-        res.status(201).json({ user: result.rows[0] });
+        const user = result.rows[0];
+        if (user && user.phis_password) {
+            user.phis_password = decrypt(user.phis_password);
+        }
+        res.status(201).json({ user });
     } catch (err) {
         if (err.code === '23505') { // unique violation
             return res.status(400).json({ error: 'Email already exists' });
@@ -38,7 +44,7 @@ router.post('/login', async (req, res) => {
         const user = result.rows[0];
 
         if (user.is_active === false) {
-            return res.status(401).json({ error: 'Account is inactive. Please contact an administrator.' });
+            return res.status(401).json({ error: 'Your account is inactive. Please contact your administrator.' });
         }
 
         let isMatch = await bcrypt.compare(password, user.password_hash);
@@ -66,7 +72,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role, name: user.name, requiresPasswordChange },
             JWT_SECRET,
-            { expiresIn: '1d' }
+            { expiresIn: '6h' }
         );
 
         res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name }, requiresPasswordChange });
@@ -105,8 +111,8 @@ router.post('/reset-password', async (req, res) => {
             from: process.env.SMTP_FROM || '"ARISE System" <noreply@arise.local>',
             to: email,
             subject: '(ARISE) Your Password Has Been Reset',
-            text: `Your ARISE system password has been reset. Your temporary password is: ${tempPassword}\n\nPlease change your password after logging in.`,
-            html: `<p>Your ARISE system password has been reset.</p><p>Your temporary password is: <strong>${tempPassword}</strong></p><p>Please change your password after logging in.</p>`
+            text: `Your ARISE system password has been successfully reset. Your temporary password is: ${tempPassword}\n\For security reasons, please change your password on your next login.`,
+            html: `<p>Your ARISE system password has been successfully reset.</p><p>Your temporary password is: <strong>${tempPassword}</strong></p><p>For security reasons, please change your password on your next login.</p>`
         };
 
         try {
@@ -153,11 +159,16 @@ router.put('/profile', authenticateToken, async (req, res) => {
     try {
         // We update name if provided, and always update phis_username/phis_password (even if empty string)
         // using COALESCE for name, but direct assignment for phis fields to allow clearing them.
+        const encryptedPhisPassword = phis_password ? encrypt(phis_password) : (phis_password === '' ? '' : null);
         const result = await pool.query(
             'UPDATE users SET name = COALESCE($1, name), phis_username = $2, phis_password = $3 WHERE id = $4 RETURNING id, email, name, role, phis_username, phis_password',
-            [name, phis_username, phis_password, req.user.id]
+            [name, phis_username, encryptedPhisPassword, req.user.id]
         );
-        res.json({ success: true, user: result.rows[0] });
+        const user = result.rows[0];
+        if (user && user.phis_password) {
+            user.phis_password = decrypt(user.phis_password);
+        }
+        res.json({ success: true, user });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -167,10 +178,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT id, email, role, name, phis_username, phis_password, created_at, must_change_password, is_active FROM users WHERE id = $1', [req.user.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
+        const user = result.rows[0];
+        if (user && user.phis_password) {
+            user.phis_password = decrypt(user.phis_password);
         }
-        res.json({ user: result.rows[0], requiresPasswordChange: result.rows[0].must_change_password });
+        res.json({ user, requiresPasswordChange: user.must_change_password });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -181,7 +193,11 @@ router.get('/users', authenticateToken, async (req, res) => {
     // Should check req.user.role === 'Issuer' ideally
     try {
         const result = await pool.query('SELECT id, email, name, role, phis_username, phis_password, is_active FROM users ORDER BY name ASC');
-        res.json(result.rows);
+        const users = result.rows.map(u => ({
+            ...u,
+            phis_password: u.phis_password ? decrypt(u.phis_password) : u.phis_password
+        }));
+        res.json(users);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -190,11 +206,16 @@ router.get('/users', authenticateToken, async (req, res) => {
 router.put('/users/:id', authenticateToken, async (req, res) => {
     const { name, email, role, phis_username, phis_password, is_active } = req.body;
     try {
+        const encryptedPhisPassword = phis_password ? encrypt(phis_password) : (phis_password === '' ? '' : null);
         const result = await pool.query(
             'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email), role = COALESCE($3, role), phis_username = COALESCE($4, phis_username), phis_password = COALESCE($5, phis_password), is_active = COALESCE($6, is_active) WHERE id = $7 RETURNING id, email, name, role, phis_username, phis_password, is_active',
-            [name, email, role, phis_username, phis_password, is_active, req.params.id]
+            [name, email, role, phis_username, encryptedPhisPassword, is_active, req.params.id]
         );
-        res.json(result.rows[0]);
+        const user = result.rows[0];
+        if (user && user.phis_password) {
+            user.phis_password = decrypt(user.phis_password);
+        }
+        res.json(user);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

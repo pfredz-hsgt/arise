@@ -313,7 +313,7 @@ const MainLayout = () => {
                 {isForcedChange && (
                     <div style={{ marginBottom: 16 }}>
                         <Typography.Text type="danger">
-                            You have logged in with a temporary password. Please set a new password to continue using the system.
+                            You have logged in with a temporary password. Please set a new password.
                         </Typography.Text>
                     </div>
                 )}
@@ -331,7 +331,7 @@ const MainLayout = () => {
                             >
                                 <Input placeholder="Enter your name" />
                             </Form.Item>
-                            
+
                             <Form.Item
                                 name="phis_username"
                                 label="PHIS Username"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Tabs, Table, Button, Modal, Form, Input, Select, message, Popconfirm, Card, Spin, Space, Switch, Tag } from 'antd';
-import { UserOutlined, DatabaseOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Typography, Tabs, Table, Button, Modal, Form, Input, Select, message, Popconfirm, Card, Spin, Space, Switch, Tag, Collapse, Dropdown } from 'antd';
+import { UserOutlined, DatabaseOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined, ApartmentOutlined, MoreOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
 import InventoryTable from './InventoryTable';
@@ -44,7 +44,7 @@ const AdminMenuPage = () => {
             }
 
             // Write File
-            XLSX.writeFile(wb, `PIMS_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.writeFile(wb, `ARISE_Data_${new Date().toISOString().split('T')[0]}.xlsx`);
 
             message.success({ content: 'Data exported successfully!', key: 'export' });
         } catch (error) {
@@ -69,11 +69,14 @@ const AdminMenuPage = () => {
                 </Button>
             </div>
             <Tabs defaultActiveKey="1">
-                <Tabs.TabPane tab={<span><UserOutlined />User Management</span>} key="1">
+                <Tabs.TabPane tab={<span><UserOutlined /> User Management</span>} key="1">
                     <UserManagement />
                 </Tabs.TabPane>
-                <Tabs.TabPane tab={<span><DatabaseOutlined />Inventory Settings</span>} key="2">
+                <Tabs.TabPane tab={<span><DatabaseOutlined /> Inventory Settings</span>} key="2">
                     <InventoryTable />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab={<span><ApartmentOutlined /> View DB Schema</span>} key="3">
+                    <DBViewer />
                 </Tabs.TabPane>
             </Tabs>
         </div>
@@ -110,12 +113,18 @@ const UserManagement = () => {
     const handleCreateUser = async (values) => {
         setSubmitting(true);
         try {
-            await api.post('/auth/register', {
+            const registerRes = await api.post('/auth/register', {
                 email: values.email,
-                password: values.password,
+                password: 'F@rmasi.1234',
                 name: values.name,
-                role: values.role
+                role: values.role,
+                phis_username: values.phis_username,
+                phis_password: values.phis_password
             });
+
+            if (registerRes && registerRes.user && registerRes.user.id) {
+                await api.post(`/auth/users/${registerRes.user.id}/reset-password`);
+            }
 
             message.success("User created successfully");
             setIsModalVisible(false);
@@ -191,12 +200,12 @@ const UserManagement = () => {
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>New User</Button>
             </div>
 
-            <Table 
-                columns={columns} 
-                dataSource={users} 
-                rowKey="id" 
-                pagination={{ pageSize: 10 }} 
-                scroll={{ x: 'max-content' }} 
+            <Table
+                columns={columns}
+                dataSource={users}
+                rowKey="id"
+                pagination={{ pageSize: 10 }}
+                scroll={{ x: 'max-content' }}
                 onRow={(record) => ({
                     onClick: () => {
                         setEditingUser(record);
@@ -227,22 +236,25 @@ const UserManagement = () => {
                     <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="password" label="Temporary Password" rules={[{ required: true }]}>
-                        <Input.Password />
-                    </Form.Item>
-                    <Form.Item name="phis_username" label="PHIS Username">
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="phis_password" label="PHIS Password">
-                        <Input.Password />
-                    </Form.Item>
+
                     <Form.Item name="role" label="Role" rules={[{ required: true }]}>
                         <Select>
                             <Option value="Indenter">Indenter</Option>
                             <Option value="Issuer">Issuer (Admin)</Option>
                         </Select>
                     </Form.Item>
-                    <Form.Item>
+                    <Collapse ghost style={{ marginBottom: 24 }}>
+                        <Collapse.Panel header="PHIS Credentials (Optional)" key="1">
+                            <Form.Item name="phis_username" label="PHIS Username">
+                                <Input autoComplete="off" />
+                            </Form.Item>
+                            <Form.Item name="phis_password" label="PHIS Password">
+                                <Input.Password autoComplete="new-password" />
+                            </Form.Item>
+                        </Collapse.Panel>
+                    </Collapse>
+
+                    <Form.Item style={{ marginBottom: 0 }}>
                         <Button type="primary" htmlType="submit" loading={submitting} block>Create User</Button>
                     </Form.Item>
                 </Form>
@@ -265,12 +277,6 @@ const UserManagement = () => {
                     <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="phis_username" label="PHIS Username">
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="phis_password" label="PHIS Password">
-                        <Input.Password />
-                    </Form.Item>
                     <Form.Item name="role" label="Role" rules={[{ required: true }]}>
                         <Select>
                             <Option value="Indenter">Indenter</Option>
@@ -280,28 +286,67 @@ const UserManagement = () => {
                     <Form.Item name="is_active" label="Active Status" valuePropName="checked">
                         <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
                     </Form.Item>
-                    <Form.Item>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <Button type="primary" htmlType="submit" loading={submitting} block>Update User</Button>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <Popconfirm
-                                    title="Reset password to default (F@rmasi.1234)?"
-                                    onConfirm={() => handleResetPassword(editingUser)}
-                                >
-                                    <Button style={{ flex: 1 }}>Reset Password</Button>
-                                </Popconfirm>
-                                <Popconfirm
-                                    title="Delete user profile?"
-                                    onConfirm={() => handleDeleteUser(editingUser)}
-                                >
-                                    <Button danger icon={<DeleteOutlined />} style={{ flex: 1 }}>Delete</Button>
-                                </Popconfirm>
-                            </div>
+                    <Collapse ghost style={{ marginBottom: 24 }}>
+                        <Collapse.Panel header="PHIS Credentials (Optional)" key="1">
+                            <Form.Item name="phis_username" label="PHIS Username">
+                                <Input autoComplete="off" />
+                            </Form.Item>
+                            <Form.Item name="phis_password" label="PHIS Password">
+                                <Input.Password autoComplete="new-password" />
+                            </Form.Item>
+                        </Collapse.Panel>
+                    </Collapse>
+                    <Form.Item style={{ marginBottom: 0 }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <Button type="primary" htmlType="submit" loading={submitting} block style={{ flex: 1 }}>
+                                Update User
+                            </Button>
+                            <Dropdown
+                                menu={{
+                                    items: [
+                                        {
+                                            key: 'reset',
+                                            label: (
+                                                <Popconfirm
+                                                    title="Reset password to default (F@rmasi.1234)?"
+                                                    onConfirm={() => handleResetPassword(editingUser)}
+                                                >
+                                                    <span style={{ display: 'block', width: '100%' }}>Reset Password</span>
+                                                </Popconfirm>
+                                            ),
+                                        },
+                                        {
+                                            key: 'delete',
+                                            danger: true,
+                                            icon: <DeleteOutlined />,
+                                            label: (
+                                                <Popconfirm
+                                                    title="Delete user profile?"
+                                                    onConfirm={() => handleDeleteUser(editingUser)}
+                                                >
+                                                    <span style={{ display: 'block', width: '100%' }}>Delete User</span>
+                                                </Popconfirm>
+                                            ),
+                                        },
+                                    ]
+                                }}
+                                trigger={['click']}
+                                placement="bottomRight"
+                            >
+                                <Button icon={<MoreOutlined />} />
+                            </Dropdown>
                         </div>
                     </Form.Item>
                 </Form>
             </Modal>
         </Card>
+
+    );
+};
+
+const DBViewer = () => {
+    return (
+        <iframe width="100%" height="900px" src='https://dbdiagram.io/e/6a6ff064067336e1de471d20/6a6ff616c3a90dd98d0991c9'> </iframe>
     );
 };
 

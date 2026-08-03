@@ -1,4 +1,4 @@
--- PIMS Database Schema (Consolidated Latest)
+-- ARISE Database Schema (Consolidated Latest)
 -- Emergency Pharmacy Hospital Segamat
 
 -- Enable UUID extension
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role TEXT DEFAULT 'Indenter' CHECK (role IN ('Issuer', 'Indenter')),
   phis_username TEXT,
-  phis_password TEXT,
+  phis_password TEXT, -- Encrypted via AES-256-GCM
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../db.js';
 import { authenticateToken } from './auth.js';
 import { runPhisIndent } from '../utils/phis_indent.js';
+import { decrypt } from '../utils/crypto.js';
 
 const router = express.Router();
 const activePhisProcesses = new Map();
@@ -25,7 +26,7 @@ router.get('/cart', authenticateToken, async (req, res) => {
                 LEFT JOIN inventory_items inv ON i.item_id = inv.id
                 WHERE i.session_id = $1
             `, [s.id]);
-            s.profiles = { name: s.profile_name, phis_username: s.phis_username, phis_password: s.phis_password };
+            s.profiles = { name: s.profile_name, phis_username: s.phis_username, phis_password: s.phis_password ? decrypt(s.phis_password) : s.phis_password };
             s.indent_items = itemsResult.rows;
         }
 
@@ -38,7 +39,7 @@ router.get('/cart', authenticateToken, async (req, res) => {
             ORDER BY ir.created_at ASC
         `);
         const requestsData = requestsResult.rows.map(req => {
-            req.profiles = { name: req.profile_name, phis_username: req.phis_username, phis_password: req.phis_password };
+            req.profiles = { name: req.profile_name, phis_username: req.phis_username, phis_password: req.phis_password ? decrypt(req.phis_password) : req.phis_password };
             return req;
         });
 
