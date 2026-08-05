@@ -38,12 +38,20 @@ router.post('/login', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (result.rows.length === 0) {
+            await pool.query(
+                'INSERT INTO audit_logs (action, details) VALUES ($1, $2)',
+                ['LOGIN_FAILED', JSON.stringify({ email, reason: 'Invalid credentials - User not found' })]
+            );
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const user = result.rows[0];
 
         if (user.is_active === false) {
+            await pool.query(
+                'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
+                [user.id, 'LOGIN_FAILED', JSON.stringify({ email, reason: 'Inactive account' })]
+            );
             return res.status(401).json({ error: 'Your account is inactive. Please contact your administrator.' });
         }
 
@@ -64,6 +72,10 @@ router.post('/login', async (req, res) => {
         }
 
         if (!isMatch) {
+            await pool.query(
+                'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
+                [user.id, 'LOGIN_FAILED', JSON.stringify({ email, reason: 'Invalid credentials - Wrong password' })]
+            );
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -73,6 +85,11 @@ router.post('/login', async (req, res) => {
             { id: user.id, email: user.email, role: user.role, name: user.name, requiresPasswordChange },
             JWT_SECRET,
             { expiresIn: '6h' }
+        );
+
+        await pool.query(
+            'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
+            [user.id, 'LOGIN_SUCCESS', JSON.stringify({ email, message: 'User logged in successfully' })]
         );
 
         res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name }, requiresPasswordChange });
@@ -153,16 +170,16 @@ router.post('/change-password', authenticateToken, async (req, res) => {
     }
 });
 
-// Update profile (name, phis_username, phis_password)
+// Update profile (name, email, phis_username, phis_password)
 router.put('/profile', authenticateToken, async (req, res) => {
-    const { name, phis_username, phis_password } = req.body;
+    const { name, email, phis_username, phis_password } = req.body;
     try {
-        // We update name if provided, and always update phis_username/phis_password (even if empty string)
-        // using COALESCE for name, but direct assignment for phis fields to allow clearing them.
+        // We update name and email if provided, and always update phis_username/phis_password (even if empty string)
+        // using COALESCE for name and email, but direct assignment for phis fields to allow clearing them.
         const encryptedPhisPassword = phis_password ? encrypt(phis_password) : (phis_password === '' ? '' : null);
         const result = await pool.query(
-            'UPDATE users SET name = COALESCE($1, name), phis_username = $2, phis_password = $3 WHERE id = $4 RETURNING id, email, name, role, phis_username, phis_password',
-            [name, phis_username, encryptedPhisPassword, req.user.id]
+            'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email), phis_username = $3, phis_password = $4 WHERE id = $5 RETURNING id, email, name, role, phis_username, phis_password',
+            [name, email, encryptedPhisPassword, req.user.id]
         );
         const user = result.rows[0];
         if (user && user.phis_password) {
@@ -170,6 +187,9 @@ router.put('/profile', authenticateToken, async (req, res) => {
         }
         res.json({ success: true, user });
     } catch (err) {
+        if (err.code === '23505') { // unique violation
+            return res.status(400).json({ error: 'Email already exists' });
+        }
         res.status(500).json({ error: err.message });
     }
 });

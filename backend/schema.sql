@@ -150,3 +150,13 @@ CREATE TRIGGER update_kewps6_records_updated_at
   BEFORE UPDATE ON kewps6_records
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Table: audit_logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  details JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Typography, Drawer, Button, Avatar, Dropdown, Modal, Form, Input, message } from 'antd';
+import { Layout, Collapse, Menu, Typography, Drawer, Button, Avatar, Dropdown, Modal, Form, Input, message } from 'antd';
 import {
     SearchOutlined,
     ShoppingCartOutlined,
@@ -51,9 +51,10 @@ const MainLayout = () => {
             if (values.newPassword) {
                 await changePassword(values.newPassword);
             }
-            if (!isForcedChange || values.name || values.phis_username || values.phis_password) {
+            if (!isForcedChange || values.name || values.email || values.phis_username || values.phis_password) {
                 await updateProfile({
                     name: values.name,
+                    email: values.email,
                     phis_username: values.phis_username,
                     phis_password: values.phis_password
                 });
@@ -72,6 +73,7 @@ const MainLayout = () => {
     const openProfileModal = () => {
         profileForm.setFieldsValue({
             name: user?.name,
+            email: user?.email,
             phis_username: user?.phis_username,
             phis_password: user?.phis_password
         });
@@ -331,52 +333,60 @@ const MainLayout = () => {
                             >
                                 <Input placeholder="Enter your name" />
                             </Form.Item>
-
                             <Form.Item
-                                name="phis_username"
-                                label="PHIS Username"
+                                name="email"
+                                label="Email"
+                                rules={[
+                                    { required: true, message: 'Please input your email' },
+                                    { type: 'email', message: 'Please enter a valid email address' }
+                                ]}
                             >
-                                <Input placeholder="Enter PHIS username" />
-                            </Form.Item>
-
-                            <Form.Item
-                                name="phis_password"
-                                label="PHIS Password"
-                            >
-                                <Input.Password placeholder="Enter PHIS password" />
+                                <Input placeholder="Enter your email" />
                             </Form.Item>
                         </>
                     )}
-
-                    <Form.Item
-                        name="newPassword"
-                        label={isForcedChange ? "New Password" : "New Password (leave blank to keep current)"}
-                        rules={[
-                            { required: isForcedChange, message: 'Please input your new password!' },
-                            { min: 6, message: 'Password must be at least 6 characters!' }
-                        ]}
-                    >
-                        <Input.Password placeholder="Enter new password" />
-                    </Form.Item>
-                    <Form.Item
-                        name="confirmPassword"
-                        label="Confirm New Password"
-                        dependencies={['newPassword']}
-                        rules={[
-                            { required: isForcedChange, message: 'Please confirm your new password!' },
-                            ({ getFieldValue }) => ({
-                                validator(_, value) {
-                                    if (!value || getFieldValue('newPassword') === value) {
-                                        return Promise.resolve();
-                                    }
-                                    return Promise.reject(new Error('The two passwords that you entered do not match!'));
-                                },
-                            }),
-                        ]}
-                    >
-                        <Input.Password placeholder="Confirm new password" />
-                    </Form.Item>
-                </Form>
+                    <Collapse ghost style={{ marginBottom: 0 }}>
+                        <Collapse.Panel header="Change Password (Optional)" key="1">
+                            <Form.Item
+                                name="newPassword"
+                                label={isForcedChange ? "New Password" : "New Password (leave blank to keep current)"}
+                                rules={[
+                                    { required: isForcedChange, message: 'Please input your new password!' },
+                                    { min: 6, message: 'Password must be at least 6 characters!' }
+                                ]}
+                            >
+                                <Input.Password autoComplete="off" placeholder="Enter new password" />
+                            </Form.Item>
+                            <Form.Item
+                                name="confirmPassword"
+                                label="Confirm New Password"
+                                dependencies={['newPassword']}
+                                rules={[
+                                    { required: isForcedChange, message: 'Please confirm your new password!' },
+                                    ({ getFieldValue }) => ({
+                                        validator(_, value) {
+                                            if (!value || getFieldValue('newPassword') === value) {
+                                                return Promise.resolve();
+                                            }
+                                            return Promise.reject(new Error('The two passwords that you entered do not match!'));
+                                        },
+                                    }),
+                                ]}
+                            >
+                                <Input.Password autoComplete="off" placeholder="Confirm new password" />
+                            </Form.Item>
+                        </Collapse.Panel>
+                    </Collapse>
+                    <Collapse ghost style={{ marginBottom: 12 }}>
+                        <Collapse.Panel header="PHIS Credentials (Optional)" key="1">
+                            <Form.Item name="phis_username" label="PHIS Username">
+                                <Input autoComplete="off" />
+                            </Form.Item>
+                            <Form.Item name="phis_password" label="PHIS Password">
+                                <Input.Password autoComplete="off" />
+                            </Form.Item>
+                        </Collapse.Panel>
+                    </Collapse>                </Form>
             </Modal>
 
             <style>{`

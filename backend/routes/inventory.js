@@ -106,6 +106,10 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
     }
 
     try {
+        const oldItemResult = await pool.query('SELECT * FROM inventory_items WHERE id = $1', [req.params.id]);
+        if (oldItemResult.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
+        const oldItem = oldItemResult.rows[0];
+
         const updateQuery = `
             UPDATE inventory_items SET 
                 name = COALESCE($1, name),
@@ -130,7 +134,37 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
         ]);
         
         if (result.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
-        res.json(result.rows[0]);
+        const updatedItem = result.rows[0];
+
+        // Audit Log Generation
+        const changes = {};
+        const fieldsToCheck = ['name', 'item_code', 'pku', 'puchase_type', 'std_kt', 'row', 'max_qty', 'balance', 'indent_source', 'remarks', 'type', 'is_short_exp', 'short_exp'];
+        let changeMessages = [];
+
+        for (const field of fieldsToCheck) {
+            const oldVal = oldItem[field];
+            const newVal = updatedItem[field];
+            
+            const oldStr = oldVal instanceof Date ? oldVal.toISOString().split('T')[0] : (oldVal !== null && oldVal !== undefined ? oldVal.toString() : '');
+            const newStr = newVal instanceof Date ? newVal.toISOString().split('T')[0] : (newVal !== null && newVal !== undefined ? newVal.toString() : '');
+            
+            if (oldStr !== newStr) {
+                changes[field] = { from: oldVal, to: newVal };
+                changeMessages.push(`updated ${field} from '${oldStr}' to '${newStr}'`);
+            }
+        }
+
+        if (changeMessages.length > 0) {
+            const userName = req.user.name || req.user.email || 'Unknown User';
+            const message = `User ${userName} ${changeMessages.join(', ')} for item '${oldItem.name}'`;
+            
+            await pool.query(
+                'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
+                [req.user.id, 'INVENTORY_UPDATE', JSON.stringify({ item_id: oldItem.id, item_name: oldItem.name, changes, message })]
+            );
+        }
+
+        res.json(updatedItem);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

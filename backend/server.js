@@ -10,6 +10,7 @@ import shortexpRouter from './routes/shortexp.js';
 import kewps6Router from './routes/kewps6.js';
 import indentSessionsRoutes from './routes/indent_sessions.js';
 import indentItemsRoutes from './routes/indent_items.js';
+import auditRoutes from './routes/audit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +32,7 @@ app.use('/api/shortexp', shortexpRouter);
 app.use('/api/kewps6', kewps6Router);
 app.use('/api/indent_sessions', indentSessionsRoutes);
 app.use('/api/indent_items', indentItemsRoutes);
+app.use('/api/audit', auditRoutes);
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });

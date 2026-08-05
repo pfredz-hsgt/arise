@@ -153,6 +153,7 @@ const LoginPage = () => {
                         rules={[{ required: true, message: 'Please input your Password!' }]}
                     >
                         <Input.Password
+                            autoComplete="off"
                             className="login-input"
                             prefix={<MedicineBoxOutlined style={{ color: '#bfbfbf', marginRight: '8px' }} />}
                             placeholder="Password"

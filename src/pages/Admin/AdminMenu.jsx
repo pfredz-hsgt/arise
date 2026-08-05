@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Tabs, Table, Button, Modal, Form, Input, Select, message, Popconfirm, Card, Spin, Space, Switch, Tag, Collapse, Dropdown } from 'antd';
-import { UserOutlined, DatabaseOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined, ApartmentOutlined, MoreOutlined } from '@ant-design/icons';
+import { UserOutlined, DatabaseOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined, ApartmentOutlined, MoreOutlined, HistoryOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
 import InventoryTable from './InventoryTable';
@@ -75,7 +75,10 @@ const AdminMenuPage = () => {
                 <Tabs.TabPane tab={<span><DatabaseOutlined /> Inventory Settings</span>} key="2">
                     <InventoryTable />
                 </Tabs.TabPane>
-                <Tabs.TabPane tab={<span><ApartmentOutlined /> View DB Schema</span>} key="3">
+                <Tabs.TabPane tab={<span><HistoryOutlined /> Audit Logs</span>} key="3">
+                    <AuditLogsViewer />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab={<span><ApartmentOutlined /> View DB Schema</span>} key="4">
                     <DBViewer />
                 </Tabs.TabPane>
             </Tabs>
@@ -249,7 +252,7 @@ const UserManagement = () => {
                                 <Input autoComplete="off" />
                             </Form.Item>
                             <Form.Item name="phis_password" label="PHIS Password">
-                                <Input.Password autoComplete="new-password" />
+                                <Input.Password autoComplete="off" />
                             </Form.Item>
                         </Collapse.Panel>
                     </Collapse>
@@ -292,7 +295,7 @@ const UserManagement = () => {
                                 <Input autoComplete="off" />
                             </Form.Item>
                             <Form.Item name="phis_password" label="PHIS Password">
-                                <Input.Password autoComplete="new-password" />
+                                <Input.Password autoComplete="off" />
                             </Form.Item>
                         </Collapse.Panel>
                     </Collapse>
@@ -347,6 +350,81 @@ const UserManagement = () => {
 const DBViewer = () => {
     return (
         <iframe width="100%" height="900px" src='https://dbdiagram.io/e/6a6ff064067336e1de471d20/6a6ff616c3a90dd98d0991c9'> </iframe>
+    );
+};
+
+const AuditLogsViewer = () => {
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchLogs();
+    }, []);
+
+    const fetchLogs = async () => {
+        setLoading(true);
+        try {
+            const data = await api.get('/audit');
+            setLogs(data || []);
+        } catch (error) {
+            console.error(error);
+            message.error("Failed to fetch audit logs");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const columns = [
+        {
+            title: 'Timestamp',
+            dataIndex: 'created_at',
+            key: 'created_at',
+            render: (text) => new Date(text).toLocaleString()
+        },
+        {
+            title: 'User',
+            key: 'user',
+            render: (_, record) => record.user_name || record.user_email || 'System / Unknown'
+        },
+        {
+            title: 'Action',
+            dataIndex: 'action',
+            key: 'action',
+            render: (text) => {
+                let color = 'blue';
+                if (text === 'LOGIN_SUCCESS') color = 'green';
+                if (text === 'LOGIN_FAILED') color = 'red';
+                if (text === 'INVENTORY_UPDATE') color = 'orange';
+                return <Tag color={color}>{text}</Tag>;
+            }
+        },
+        {
+            title: 'Details',
+            dataIndex: 'details',
+            key: 'details',
+            render: (details) => {
+                if (!details) return '-';
+                if (details.message) return <span>{details.message}</span>;
+                if (details.reason) return <span>{details.email ? `${details.email} - ` : ''}{details.reason}</span>;
+                return <pre style={{ margin: 0, fontSize: '12px' }}>{JSON.stringify(details, null, 2)}</pre>;
+            }
+        }
+    ];
+
+    return (
+        <Card bodyStyle={{ padding: 0 }}>
+            <div style={{ padding: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button icon={<HistoryOutlined />} onClick={fetchLogs} loading={loading}>Refresh</Button>
+            </div>
+            <Table
+                columns={columns}
+                dataSource={logs}
+                rowKey="id"
+                loading={loading}
+                pagination={{ pageSize: 15 }}
+                scroll={{ x: 'max-content' }}
+            />
+        </Card>
     );
 };
 
