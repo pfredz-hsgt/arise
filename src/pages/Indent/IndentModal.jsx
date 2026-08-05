@@ -31,28 +31,19 @@ const { TextArea } = Input;
 const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 500 }) => {
     const { user } = useAuth();
     const [form] = Form.useForm();
-    const [editForm] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(null);
     const [maxQty, setMaxQty] = useState(null);
-    const [indentSource, setIndentSource] = useState(null);
-    const [isShortExp, setIsShortExp] = useState(false);
-    const [shortExp, setShortExp] = useState(null);
-    const [hasChanges, setHasChanges] = useState(false);
-    const [editModalVisible, setEditModalVisible] = useState(false);
+
     const quantityInputRef = useRef(null);
-    const debounceRef = useRef(null);
-    const [isIndentSourceDropdownOpen, setIsIndentSourceDropdownOpen] = useState(false);
+
 
     // Initialize state when drug changes
     useEffect(() => {
         if (drug) {
             setBalance(drug.balance);
             setMaxQty(drug.max_qty);
-            setIndentSource(drug.indent_source);
-            setIsShortExp(drug.is_short_exp || false);
-            setShortExp(drug.short_exp ? dayjs(drug.short_exp) : null);
-            setHasChanges(false);
+
 
             // Auto-calculate indent quantity: max_qty - balance
             const calculatedQty = calculateIndentQty(drug.max_qty, drug.balance);
@@ -83,25 +74,9 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
         // Recalculate indent quantity when balance changes
         const calculatedQty = calculateIndentQty(maxQty, value);
         form.setFieldsValue({ quantity: calculatedQty });
-
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-            setHasChanges(true);
-        }, 500);
     };
 
-    const handleMaxQtyChange = (value) => {
-        setMaxQty(value);
 
-        // Recalculate indent quantity when max qty changes
-        const calculatedQty = calculateIndentQty(value, balance);
-        form.setFieldsValue({ quantity: calculatedQty });
-
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-            setHasChanges(true);
-        }, 500);
-    };
 
     // Helper function to calculate indent quantity
     const calculateIndentQty = (maxQty, currentBalance) => {
@@ -111,49 +86,11 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
         return result > 0 ? result.toString() : '0';
     };
 
-    const handleIndentSourceChange = (value) => {
-        setIndentSource(value);
-        setIsIndentSourceDropdownOpen(false);
-        if (document.activeElement) {
-            document.activeElement.blur();
-        }
-        setHasChanges(true);
-    };
 
-    const handleShortExpChange = (e) => {
-        setIsShortExp(e.target.checked);
-        setHasChanges(true);
-    };
 
-    const handleShortExpDateChange = (date) => {
-        setShortExp(date);
-        setHasChanges(true);
-    };
 
-    const saveQuickUpdates = async () => {
-        try {
-            await api.put(`/inventory/${drug.id}`, {
-                max_qty: maxQty,
-                balance: balance,
-                indent_source: indentSource,
-                is_short_exp: isShortExp,
-                short_exp: shortExp ? shortExp.format('YYYY-MM-DD') : null,
-            });
-
-            message.success('Item details updated');
-            setHasChanges(false);
-            onClose(true)
-            if (onDrugUpdate) onDrugUpdate();
-        } catch (error) {
-            console.error('Error updating item details:', error);
-            message.error('Failed to update item details');
-            throw error;
-        }
-    };
 
     const handleClose = () => {
-        // Just close without saving changes
-        if (debounceRef.current) clearTimeout(debounceRef.current);
         onClose(false);
     };
 
@@ -194,45 +131,23 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
         }
     };
 
-    const handleOpenEditModal = () => {
-        editForm.setFieldsValue(drug);
-        setEditModalVisible(true);
-    };
 
-    const handleEditSubmit = async (values) => {
-        try {
-            await api.put(`/inventory/${drug.id}`, values);
-
-            message.success('Drug updated successfully');
-            setEditModalVisible(false);
-            editForm.resetFields();
-            if (onDrugUpdate) onDrugUpdate();
-        } catch (error) {
-            console.error('Error updating drug:', error);
-            message.error('Failed to update drug');
-        }
-    };
 
     // Handle Enter key shortcut
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.defaultPrevented) return;
 
-            if (visible && !editModalVisible && e.key === 'Enter') {
+            if (visible && e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-
-                if (hasChanges) {
-                    saveQuickUpdates();
-                } else {
-                    form.submit();
-                }
+                form.submit();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [visible, editModalVisible, hasChanges, form, saveQuickUpdates]);
+    }, [visible, form]);
 
     if (!drug) return null;
 
@@ -246,14 +161,6 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                 title={
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: 24 }}>
                         <span>Add to Indent</span>
-                        <Button
-                            type="text"
-                            icon={<FormOutlined />}
-                            onClick={handleOpenEditModal}
-                            size="small"
-                        >
-                            Edit
-                        </Button>
                     </div>
                 }
                 footer={null}
@@ -305,13 +212,7 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                         borderRadius: '8px',
                         border: '1px solid #f0f0f0'
                     }}>
-                        {hasChanges && (
-                            <div style={{ marginBottom: 12, textAlign: 'center' }}>
-                                <Text type="warning" style={{ fontSize: 12 }}>
-                                    ⚠ Unsaved changes
-                                </Text>
-                            </div>
-                        )}
+
 
                         {/* Stock Information */}
                         <Row gutter={[16, 16]}>
@@ -348,37 +249,22 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                                 </div>
                             </Col>
                         </Row>
-
-                        {/* Indent Source */}
+                        {/* Indent Source (Read Only) */}
                         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                             <Col xs={24}>
-                                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
-                                    Indent From
-                                </Text>
-                                <Select
-                                    value={indentSource}
-                                    onChange={handleIndentSourceChange}
-                                    style={{ width: '100%' }}
-                                    placeholder="Select source"
-                                    size="large"
-                                    virtual={false}
-                                    showSearch={false}
-                                    open={isIndentSourceDropdownOpen}
-                                    onDropdownVisibleChange={(visible) => setIsIndentSourceDropdownOpen(visible)}
-                                >
-                                    <Select.Option value="OPD Kaunter">OPD Kaunter</Select.Option>
-                                    <Select.Option value="OPD Substor">OPD Substor</Select.Option>
-                                    <Select.Option value="IPD Kaunter">IPD Kaunter</Select.Option>
-                                    <Select.Option value="IPD Substor">IPD Substor</Select.Option>
-                                    <Select.Option value="MNF Substor">MNF Substor</Select.Option>
-                                    <Select.Option value="MNF Eksternal">MNF Eksternal</Select.Option>
-                                    <Select.Option value="MNF Internal">MNF Internal</Select.Option>
-                                    <Select.Option value="Prepacking">Prepacking</Select.Option>
-                                    <Select.Option value="HPSF Muar">HPSF Muar</Select.Option>
-                                </Select>
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                                        Indent From
+                                    </Text>
+                                    <Input
+                                        value={drug.indent_source || 'N/A'}
+                                        readOnly
+                                        size="large"
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
                             </Col>
                         </Row>
-
                         {/* Short Expiry 
                         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                             <Col xs={24}>
@@ -450,16 +336,7 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
 
                         <Form.Item style={{ marginBottom: 0 }}>
                             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                                {hasChanges && (
-                                    <Button
-                                        onClick={saveQuickUpdates}
-                                        loading={loading}
-                                        type="default"
-                                        style={{ borderColor: '#52c41a', color: '#52c41a' }}
-                                    >
-                                        Save Changes
-                                    </Button>
-                                )}
+
                                 <Button onClick={handleClose}>Cancel</Button>
                                 <Button type="primary" htmlType="submit" loading={loading}>
                                     Add to Cart
@@ -470,91 +347,6 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                 </Space>
             </Drawer>
 
-            {/* Edit Drug Modal */}
-            <Modal
-                title="Edit Drug Details"
-                open={editModalVisible}
-                onCancel={() => setEditModalVisible(false)}
-                onOk={() => editForm.submit()}
-                width={600}
-                zIndex={2000}
-                centered
-            >
-                <Form
-                    form={editForm}
-                    layout="vertical"
-                    onFinish={handleEditSubmit}
-                >
-                    <Form.Item
-                        name="name"
-                        label="Drug Name"
-                        rules={[{ required: true, message: 'Please enter drug name' }]}
-                    >
-                        <Input placeholder="e.g., Paracetamol 500mg" />
-                    </Form.Item>
-
-                    <Space style={{ width: '100%' }} size="large">
-                        <Form.Item name="item_code" label="Item Code">
-                            <Input placeholder="e.g., ITEM001" style={{ width: 150 }} />
-                        </Form.Item>
-
-                        <Form.Item name="pku" label="PKU">
-                            <Input placeholder="e.g., PKU001" style={{ width: 150 }} />
-                        </Form.Item>
-                    </Space>
-
-                    <Space style={{ width: '100%' }} size="large">
-                        <Form.Item name="puchase_type" label="Purchase Type">
-                            <Select placeholder="Select type" style={{ width: 150 }} virtual={false}>
-                                <Select.Option value="LP">LP</Select.Option>
-                                <Select.Option value="APPL">APPL</Select.Option>
-                            </Select>
-                        </Form.Item>
-
-                        <Form.Item name="std_kt" label="STD/KT">
-                            <Select placeholder="Select" style={{ width: 150 }} virtual={false}>
-                                <Select.Option value="STD">STD</Select.Option>
-                                <Select.Option value="KT">KT</Select.Option>
-                            </Select>
-                        </Form.Item>
-                    </Space>
-
-                    <Space style={{ width: '100%' }} size="large">
-                        <Form.Item name="row" label="Row">
-                            <Input placeholder="e.g., A1" style={{ width: 120 }} />
-                        </Form.Item>
-
-                        <Form.Item name="max_qty" label="Max Quantity">
-                            <InputNumber placeholder="Max Qty" style={{ width: 120 }} min={0} inputMode="numeric" />
-                        </Form.Item>
-
-                        <Form.Item name="balance" label="Balance">
-                            <InputNumber placeholder="Balance" style={{ width: 120 }} min={0} inputMode="numeric" />
-                        </Form.Item>
-                    </Space>
-
-                    <Form.Item name="indent_source" label="Indent Source">
-                        <Select placeholder="Select source" virtual={false}>
-                            <Select.Option value="OPD Kaunter">OPD Kaunter</Select.Option>
-                            <Select.Option value="OPD Substor">OPD Substor</Select.Option>
-                            <Select.Option value="IPD Kaunter">IPD Kaunter</Select.Option>
-                            <Select.Option value="IPD Substor">IPD Substor</Select.Option>
-                            <Select.Option value="MNF Substor">MNF Substor</Select.Option>
-                            <Select.Option value="MNF Eksternal">MNF Eksternal</Select.Option>
-                            <Select.Option value="MNF Internal">MNF Internal</Select.Option>
-                            <Select.Option value="Prepacking">Prepacking</Select.Option>
-                            <Select.Option value="HPSF Muar">HPSF Muar</Select.Option>
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item name="remarks" label="Remarks">
-                        <TextArea
-                            rows={3}
-                            placeholder="Any special notes or instructions..."
-                        />
-                    </Form.Item>
-                </Form>
-            </Modal>
         </>
     );
 };

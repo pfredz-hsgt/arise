@@ -181,11 +181,8 @@ const RoutineIndentPage = () => {
                 await api.post('/indent_items', upsertData);
             }
 
-            // Save max_qty and balance if they were adjusted
+            // Save balance if it was adjusted
             const inventoryUpdates = {};
-            if (currentMaxQty !== currentItem.max_qty) {
-                inventoryUpdates.max_qty = currentMaxQty;
-            }
             if (currentBalance !== currentItem.balance) {
                 inventoryUpdates.balance = currentBalance;
             }
