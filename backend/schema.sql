@@ -18,6 +18,38 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Table: indent_sources
+CREATE TABLE IF NOT EXISTS indent_sources (
+  name TEXT PRIMARY KEY,
+  color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Table: item_types
+CREATE TABLE IF NOT EXISTS item_types (
+  name TEXT PRIMARY KEY,
+  color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Table: purchase_types
+CREATE TABLE IF NOT EXISTS purchase_types (
+  name TEXT PRIMARY KEY,
+  color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Table: std_kts
+CREATE TABLE IF NOT EXISTS std_kts (
+  name TEXT PRIMARY KEY,
+  color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Table: inventory_items
 -- Master list of all drugs in the pharmacy
 CREATE TABLE IF NOT EXISTS inventory_items (
@@ -26,16 +58,16 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   item_code TEXT,
   pku TEXT,
   convert_sku INTEGER DEFAULT 1,
-  puchase_type TEXT CHECK (puchase_type IN ('LP', 'APPL')),
-  std_kt TEXT CHECK (std_kt IN ('STD', 'KT')),
+  puchase_type TEXT REFERENCES purchase_types(name) ON UPDATE CASCADE ON DELETE SET NULL,
+  std_kt TEXT REFERENCES std_kts(name) ON UPDATE CASCADE ON DELETE SET NULL,
   row TEXT,
   max_qty INTEGER,
   balance INTEGER,
-  indent_source TEXT CHECK (indent_source IN ('OPD Kaunter', 'OPD Substor', 'IPD Kaunter', 'MNF Substor', 'MNF Eksternal', 'MNF Internal', 'Prepacking', 'IPD Substor', 'HPSF Muar')),
+  indent_source TEXT REFERENCES indent_sources(name) ON UPDATE CASCADE ON DELETE SET NULL,
   remarks TEXT,
   is_short_exp BOOLEAN DEFAULT false,
   short_exp DATE,
-  type TEXT CHECK (type IN ('OPD', 'Eye/Ear/Nose/Inh', 'DDA', 'External', 'Injection', 'Syrup', 'Others', 'UOD', 'Non-Drug')),
+  type TEXT REFERENCES item_types(name) ON UPDATE CASCADE ON DELETE SET NULL,
   image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

@@ -1,36 +1,44 @@
-// Color mapping functions for indent sources and new schema fields
-// Use these consistently across all components
+import { api } from './api';
 
-// Source colors – all clearly separated hues
+let sourceColors = {};
+let purchaseTypeColors = {};
+let stdKtColors = {};
+let itemTypeColors = {};
+let isInitialized = false;
+
+export const initColors = async () => {
+    if (isInitialized) return;
+    try {
+        const [sources, pTypes, stdKts, types] = await Promise.all([
+            api.get('/lookups/sources'),
+            api.get('/lookups/purchasetypes'),
+            api.get('/lookups/stdkts'),
+            api.get('/lookups/types')
+        ]);
+        
+        sources.forEach(s => sourceColors[s.name] = s.color);
+        pTypes.forEach(p => purchaseTypeColors[p.name] = p.color);
+        stdKts.forEach(sk => stdKtColors[sk.name] = sk.color);
+        types.forEach(t => itemTypeColors[t.name] = t.color);
+        
+        isInitialized = true;
+    } catch (error) {
+        console.error('Failed to initialize colors:', error);
+    }
+};
+
 export const getSourceColor = (source) => {
-    const colors = {
-        'OPD Kaunter': 'green',
-        'OPD Substor': 'cyan',
-        'IPD Kaunter': 'geekblue',
-        'IPD Substor': 'blue',
-        'MNF Substor': 'volcano',
-        'MNF Eksternal': 'magenta',
-        'MNF Internal': 'orange',
-        'Prepacking': 'purple',
-        'HPSF Muar': 'gold',
-    };
-    return colors[source] || 'default';
+    return sourceColors[source] || 'default';
 };
 
-// Purchase type – no overlap with source meanings
 export const getPuchaseTypeColor = (type) => {
-    const colors = {
-        'LP': 'gold',        // Local Purchase
-        'APPL': 'geekblue',  // Contract / Approved list
-    };
-    return colors[type] || 'default';
+    return purchaseTypeColors[type] || 'default';
 };
 
-// Item flow type – strong semantic contrast
 export const getStdKtColor = (type) => {
-    const colors = {
-        'STD': 'green', // Standard
-        'KT': 'red',    // Keluar Terus (Direct Issue)
-    };
-    return colors[type] || 'default';
+    return stdKtColors[type] || 'default';
+};
+
+export const getTypeColor = (type) => {
+    return itemTypeColors[type] || 'default';
 };

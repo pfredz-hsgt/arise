@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ShortExpPage from './pages/Shortexp/ShortExpPage';
 import ShortExpEntry from './pages/Shortexp/ShortExpEntry';
 import { Spin } from 'antd';
+import { initColors } from './lib/colorMappings';
 
 const ProtectedRoute = ({ children, requireIssuer = false }) => {
     const { user, isIssuer, loading } = useAuth();
@@ -35,6 +36,10 @@ const ProtectedRoute = ({ children, requireIssuer = false }) => {
 };
 
 function App() {
+    React.useEffect(() => {
+        initColors();
+    }, []);
+
     return (
         <AuthProvider>
             <ConfigProvider

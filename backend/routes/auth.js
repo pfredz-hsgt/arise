@@ -84,7 +84,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role, name: user.name, requiresPasswordChange },
             JWT_SECRET,
-            { expiresIn: '6h' }
+            { expiresIn: process.env.JWT_EXPIRE || '6h' }
         );
 
         await pool.query(

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Tabs, Table, Button, Modal, Form, Input, Select, message, Popconfirm, Card, Spin, Space, Switch, Tag, Collapse, Dropdown } from 'antd';
-import { UserOutlined, DatabaseOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined, ApartmentOutlined, MoreOutlined, HistoryOutlined } from '@ant-design/icons';
+import { Typography, Tabs, Table, Button, Modal, Form, Input, Select, message, Popconfirm, Card, Spin, Space, Switch, Tag, Collapse, Dropdown, List, Row, Col, ColorPicker } from 'antd';
+import { UserOutlined, DatabaseOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined, ApartmentOutlined, MoreOutlined, HistoryOutlined, TagOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
 import InventoryTable from './InventoryTable';
@@ -80,6 +80,9 @@ const AdminMenuPage = () => {
                 </Tabs.TabPane>
                 <Tabs.TabPane tab={<span><ApartmentOutlined /> View DB Schema</span>} key="4">
                     <DBViewer />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab={<span><TagOutlined /> System Values</span>} key="5">
+                    <SystemValuesTab />
                 </Tabs.TabPane>
             </Tabs>
         </div>
@@ -425,6 +428,165 @@ const AuditLogsViewer = () => {
                 scroll={{ x: 'max-content' }}
             />
         </Card>
+    );
+};
+
+const LookupManager = ({ title, endpoint, data, onRefresh }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [form] = Form.useForm();
+    const [submitting, setSubmitting] = useState(false);
+    const colorValue = Form.useWatch('color', form);
+
+    const presetColors = ['blue', 'purple', 'cyan', 'green', 'magenta', 'pink', 'red', 'orange', 'yellow', 'volcano', 'geekblue', 'lime', 'gold'];
+
+    const handleSubmit = async (values) => {
+        setSubmitting(true);
+        try {
+            let finalColor = values.color;
+            if (values.color === 'custom') {
+                finalColor = typeof values.customColor === 'string' ? values.customColor : values.customColor?.toHexString();
+            }
+
+            if (editingItem) {
+                await api.put(`${endpoint}/${encodeURIComponent(editingItem.name)}`, { name: values.name.trim(), color: finalColor });
+                message.success(`${title} updated`);
+            } else {
+                await api.post(endpoint, { name: values.name.trim(), color: finalColor });
+                message.success(`${title} added`);
+            }
+            setIsModalOpen(false);
+            setEditingItem(null);
+            form.resetFields();
+            onRefresh();
+        } catch (error) {
+            message.error(error.response?.data?.error || `Failed to save ${title}`);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (name) => {
+        try {
+            await api.delete(`${endpoint}/${encodeURIComponent(name)}`);
+            message.success(`${title} deleted`);
+            onRefresh();
+        } catch (error) {
+            message.error('Failed to delete. It may be in use.');
+        }
+    };
+
+    return (
+        <Card title={title} extra={<Button type="primary" onClick={() => { setEditingItem(null); form.resetFields(); setIsModalOpen(true); }} icon={<PlusOutlined />}>Add</Button>}>
+            <List
+                bordered
+                dataSource={data}
+                renderItem={item => (
+                    <List.Item
+                        actions={[
+                            <Popconfirm title="Delete this item?" onConfirm={(e) => { e.stopPropagation(); handleDelete(item.name); }}>
+                                <Button danger type="text" icon={<DeleteOutlined />} onClick={(e) => e.stopPropagation()} />
+                            </Popconfirm>
+                        ]}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                            setEditingItem(item);
+                            const isPreset = presetColors.includes(item.color);
+                            form.setFieldsValue({
+                                name: item.name,
+                                color: (!item.color || isPreset) ? item.color : 'custom',
+                                customColor: (!item.color || isPreset) ? undefined : item.color
+                            });
+                            setIsModalOpen(true);
+                        }}
+                    >
+                        <Tag color={item.color}>{item.name}</Tag>
+                    </List.Item>
+                )}
+            />
+            <Modal
+                title={editingItem ? `Edit ${title}` : `Add ${title}`}
+                open={isModalOpen}
+                onCancel={() => { setIsModalOpen(false); setEditingItem(null); form.resetFields(); }}
+                footer={null}
+            >
+                <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                    <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Please enter a name' }]}>
+                        <Input placeholder="Enter name" />
+                    </Form.Item>
+                    <Form.Item name="color" label="Color (Optional)" extra="Leave blank for a random color">
+                        <Select placeholder="Select a color" allowClear>
+                            {presetColors.map(c => (
+                                <Select.Option key={c} value={c}>
+                                    <Tag color={c}>{c}</Tag>
+                                </Select.Option>
+                            ))}
+                            <Select.Option value="custom">Custom...</Select.Option>
+                        </Select>
+                    </Form.Item>
+                    {colorValue === 'custom' && (
+                        <Form.Item name="customColor" label="Custom Color" rules={[{ required: true, message: 'Please select a custom color' }]}>
+                            <ColorPicker disabledAlpha />
+                        </Form.Item>
+                    )}
+                    <Form.Item style={{ marginBottom: 0 }}>
+                        <Button type="primary" htmlType="submit" loading={submitting} block>Submit</Button>
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </Card>
+    );
+};
+
+const SystemValuesTab = () => {
+    const [sources, setSources] = useState([]);
+    const [types, setTypes] = useState([]);
+    const [purchaseTypes, setPurchaseTypes] = useState([]);
+    const [stdKts, setStdKts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchValues();
+    }, []);
+
+    const fetchValues = async () => {
+        setLoading(true);
+        try {
+            const [sourcesData, typesData, pTypesData, stdKtsData] = await Promise.all([
+                api.get('/lookups/sources'),
+                api.get('/lookups/types'),
+                api.get('/lookups/purchasetypes'),
+                api.get('/lookups/stdkts')
+            ]);
+            setSources(sourcesData || []);
+            setTypes(typesData || []);
+            setPurchaseTypes(pTypesData || []);
+            setStdKts(stdKtsData || []);
+        } catch (error) {
+            console.error('Error fetching system values:', error);
+            message.error('Failed to fetch system values');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) return <Spin style={{ display: 'block', margin: '40px auto' }} />;
+
+    return (
+        <Row gutter={[24, 24]} style={{ padding: '0 16px' }}>
+            <Col span={12}>
+                <LookupManager title="Indent Sources" endpoint="/lookups/sources" data={sources} onRefresh={fetchValues} />
+            </Col>
+            <Col span={12}>
+                <LookupManager title="Item Types" endpoint="/lookups/types" data={types} onRefresh={fetchValues} />
+            </Col>
+            <Col span={12}>
+                <LookupManager title="Purchase Types" endpoint="/lookups/purchasetypes" data={purchaseTypes} onRefresh={fetchValues} />
+            </Col>
+            <Col span={12}>
+                <LookupManager title="STD/KT" endpoint="/lookups/stdkts" data={stdKts} onRefresh={fetchValues} />
+            </Col>
+        </Row>
     );
 };
 

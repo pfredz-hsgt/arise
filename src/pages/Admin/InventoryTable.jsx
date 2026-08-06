@@ -22,12 +22,34 @@ const InventoryTable = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [editingDrug, setEditingDrug] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [indentSources, setIndentSources] = useState([]);
+    const [itemTypes, setItemTypes] = useState([]);
+    const [purchaseTypes, setPurchaseTypes] = useState([]);
+    const [stdKts, setStdKts] = useState([]);
     const [form] = Form.useForm();
 
     useEffect(() => {
         fetchDrugs();
+        fetchLookupValues();
         setupRealtimeSubscription();
     }, []);
+
+    const fetchLookupValues = async () => {
+        try {
+            const [sourcesData, typesData, pTypesData, stdKtsData] = await Promise.all([
+                api.get('/lookups/sources'),
+                api.get('/lookups/types'),
+                api.get('/lookups/purchasetypes'),
+                api.get('/lookups/stdkts')
+            ]);
+            setIndentSources(sourcesData || []);
+            setItemTypes(typesData || []);
+            setPurchaseTypes(pTypesData || []);
+            setStdKts(stdKtsData || []);
+        } catch (error) {
+            console.error('Error fetching lookup values:', error);
+        }
+    };
 
     const fetchDrugs = async () => {
         try {
@@ -124,10 +146,7 @@ const InventoryTable = () => {
             title: 'Purchase Type',
             dataIndex: 'puchase_type',
             key: 'puchase_type',
-            filters: [
-                { text: 'LP', value: 'LP' },
-                { text: 'APPL', value: 'APPL' },
-            ],
+            filters: purchaseTypes.map(p => ({ text: p.name, value: p.name })),
             onFilter: (value, record) => record.puchase_type === value,
             width: 100,
         },
@@ -135,10 +154,7 @@ const InventoryTable = () => {
             title: 'STD/KT',
             dataIndex: 'std_kt',
             key: 'std_kt',
-            filters: [
-                { text: 'STD', value: 'STD' },
-                { text: 'KT', value: 'KT' },
-            ],
+            filters: stdKts.map(s => ({ text: s.name, value: s.name })),
             onFilter: (value, record) => record.std_kt === value,
             width: 80,
         },
@@ -177,17 +193,7 @@ const InventoryTable = () => {
             title: 'Source',
             dataIndex: 'indent_source',
             key: 'indent_source',
-            filters: [
-                { text: 'OPD Kaunter', value: 'OPD Kaunter' },
-                { text: 'OPD Substor', value: 'OPD Substor' },
-                { text: 'IPD Kaunter', value: 'IPD Kaunter' },
-                { text: 'IPD Substor', value: 'IPD Substor' },
-                { text: 'MNF Substor', value: 'MNF Substor' },
-                { text: 'MNF Eksternal', value: 'MNF Eksternal' },
-                { text: 'MNF Internal', value: 'MNF Internal' },
-                { text: 'Prepacking', value: 'Prepacking' },
-                { text: 'HPSF Muar', value: 'HPSF Muar' },
-            ],
+            filters: indentSources.map(s => ({ text: s.name, value: s.name })),
             onFilter: (value, record) => record.indent_source === value,
             width: 120,
         },
@@ -197,6 +203,14 @@ const InventoryTable = () => {
             key: 'remarks',
             ellipsis: true,
             width: 200,
+        },
+        {
+            title: 'Type',
+            dataIndex: 'type',
+            key: 'type',
+            filters: itemTypes.map(t => ({ text: t.name, value: t.name })),
+            onFilter: (value, record) => record.type === value,
+            width: 120,
         },
         {
             title: 'Actions',
@@ -343,8 +357,9 @@ const InventoryTable = () => {
                             label="Purchase Type"
                         >
                             <Select placeholder="Select type" style={{ width: 150 }}>
-                                <Select.Option value="LP">LP</Select.Option>
-                                <Select.Option value="APPL">APPL</Select.Option>
+                                {purchaseTypes.map(p => (
+                                    <Select.Option key={p.name} value={p.name}>{p.name}</Select.Option>
+                                ))}
                             </Select>
                         </Form.Item>
 
@@ -353,8 +368,9 @@ const InventoryTable = () => {
                             label="STD/KT"
                         >
                             <Select placeholder="Select" style={{ width: 150 }}>
-                                <Select.Option value="STD">STD</Select.Option>
-                                <Select.Option value="KT">KT</Select.Option>
+                                {stdKts.map(s => (
+                                    <Select.Option key={s.name} value={s.name}>{s.name}</Select.Option>
+                                ))}
                             </Select>
                         </Form.Item>
                     </Space>
@@ -376,19 +392,23 @@ const InventoryTable = () => {
                         </Form.Item>
                     </Space>
 
-                    <Form.Item name="indent_source" label="Indent Source">
-                        <Select placeholder="Select source">
-                            <Select.Option value="OPD Kaunter">OPD Kaunter</Select.Option>
-                            <Select.Option value="OPD Substor">OPD Substor</Select.Option>
-                            <Select.Option value="IPD Kaunter">IPD Kaunter</Select.Option>
-                            <Select.Option value="IPD Substor">IPD Substor</Select.Option>
-                            <Select.Option value="MNF Substor">MNF Substor</Select.Option>
-                            <Select.Option value="MNF Eksternal">MNF Eksternal</Select.Option>
-                            <Select.Option value="MNF Internal">MNF Internal</Select.Option>
-                            <Select.Option value="Prepacking">Prepacking</Select.Option>
-                            <Select.Option value="HPSF Muar">HPSF Muar</Select.Option>
-                        </Select>
-                    </Form.Item>
+                    <Space style={{ width: '100%' }} size="large">
+                        <Form.Item name="indent_source" label="Indent Source" style={{ flex: 1 }}>
+                            <Select placeholder="Select source">
+                                {indentSources.map(s => (
+                                    <Select.Option key={s.name} value={s.name}>{s.name}</Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+
+                        <Form.Item name="type" label="Item Type" style={{ flex: 1 }}>
+                            <Select placeholder="Select type">
+                                {itemTypes.map(t => (
+                                    <Select.Option key={t.name} value={t.name}>{t.name}</Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Space>
 
                     <Form.Item name="remarks" label="Remarks">
                         <TextArea
