@@ -359,6 +359,7 @@ const DBViewer = () => {
 const AuditLogsViewer = () => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchText, setSearchText] = useState('');
 
     useEffect(() => {
         fetchLogs();
@@ -377,22 +378,39 @@ const AuditLogsViewer = () => {
         }
     };
 
+    const userFilters = Array.from(new Set(logs.map(record => record.user_name || record.user_email || 'System / Unknown'))).map(u => ({ text: u, value: u }));
+    const actionFilters = Array.from(new Set(logs.map(record => record.action))).filter(Boolean).map(a => ({ text: a, value: a }));
+
     const columns = [
         {
             title: 'Timestamp',
             dataIndex: 'created_at',
             key: 'created_at',
-            render: (text) => new Date(text).toLocaleString()
+            render: (text) => {
+                const date = new Date(text);
+                const dd = String(date.getDate()).padStart(2, '0');
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const yyyy = date.getFullYear();
+                const time = date.toLocaleTimeString();
+                return `${dd}/${mm}/${yyyy}, ${time}`;
+            }
         },
         {
             title: 'User',
             key: 'user',
+            filters: userFilters,
+            onFilter: (value, record) => {
+                const userName = record.user_name || record.user_email || 'System / Unknown';
+                return userName === value;
+            },
             render: (_, record) => record.user_name || record.user_email || 'System / Unknown'
         },
         {
             title: 'Action',
             dataIndex: 'action',
             key: 'action',
+            filters: actionFilters,
+            onFilter: (value, record) => record.action === value,
             render: (text) => {
                 let color = 'blue';
                 if (text === 'LOGIN_SUCCESS') color = 'green';
@@ -414,14 +432,31 @@ const AuditLogsViewer = () => {
         }
     ];
 
+    const filteredLogs = logs.filter(log => {
+        if (!searchText) return true;
+        let detailsStr = '';
+        if (log.details) {
+            if (log.details.message) detailsStr = log.details.message;
+            else if (log.details.reason) detailsStr = `${log.details.email ? `${log.details.email} - ` : ''}${log.details.reason}`;
+            else detailsStr = JSON.stringify(log.details);
+        }
+        return detailsStr.toLowerCase().includes(searchText.toLowerCase());
+    });
+
     return (
         <Card bodyStyle={{ padding: 0 }}>
-            <div style={{ padding: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Input.Search 
+                    placeholder="Search Details..." 
+                    allowClear 
+                    onChange={(e) => setSearchText(e.target.value)} 
+                    style={{ maxWidth: 300 }} 
+                />
                 <Button icon={<HistoryOutlined />} onClick={fetchLogs} loading={loading}>Refresh</Button>
             </div>
             <Table
                 columns={columns}
-                dataSource={logs}
+                dataSource={filteredLogs}
                 rowKey="id"
                 loading={loading}
                 pagination={{ pageSize: 15 }}
