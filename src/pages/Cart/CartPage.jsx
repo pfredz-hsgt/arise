@@ -36,6 +36,122 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
+const EditQuantityModal = ({ visible, onCancel, onOk, editingItem, updatingQty }) => {
+    const [localQuantity, setLocalQuantity] = useState(0);
+
+    useEffect(() => {
+        if (visible && editingItem) {
+            setLocalQuantity(editingItem.requested_qty);
+        }
+    }, [visible, editingItem]);
+
+    return (
+        <Modal
+            title="Edit Quantity"
+            open={visible}
+            onCancel={onCancel}
+            confirmLoading={updatingQty}
+            width={'450px'}
+            onOk={() => onOk(localQuantity)}
+        >
+            {editingItem && editingItem.inventory_items && (
+                <div style={{ padding: '10px 0', textAlign: 'center' }}>
+                    <Title level={4} style={{ marginBottom: 4 }}>
+                        {editingItem.inventory_items.name}
+                    </Title>
+
+                    {/* Item Code and PKU */}
+                    <Space size="large" style={{ marginBottom: 12 }}>
+                        {editingItem.inventory_items.item_code && (
+                            <Text type="secondary" style={{ fontSize: '13px' }}>
+                                <Text>{editingItem.inventory_items.item_code}</Text>
+                            </Text>
+                        )}
+                        {editingItem.inventory_items.pku && (
+                            <Text type="secondary" style={{ fontSize: '13px' }}>
+                                PKU: <Text strong>{editingItem.inventory_items.pku}</Text>
+                            </Text>
+                        )}
+                    </Space> <br />
+
+                    {/* Tags */}
+                    <Space wrap style={{ marginBottom: 12, justifyContent: 'center' }}>
+                        {editingItem.inventory_items.puchase_type && (
+                            <Tag color={getPuchaseTypeColor(editingItem.inventory_items.puchase_type)}>
+                                {editingItem.inventory_items.puchase_type}
+                            </Tag>
+                        )}
+                        {editingItem.inventory_items.std_kt && (
+                            <Tag color={getStdKtColor(editingItem.inventory_items.std_kt)}>
+                                {editingItem.inventory_items.std_kt}
+                            </Tag>
+                        )}
+                        {editingItem.inventory_items.row && <Tag>Row: {editingItem.inventory_items.row}</Tag>}
+                    </Space>
+
+                    {/* Inventory Info */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-around',
+                        background: '#fafafa',
+                        padding: '12px 0',
+                        borderRadius: '6px',
+                        border: '1px solid #f0f0f0',
+                        marginBottom: 16
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>Max Qty</Text>
+                            <Text strong style={{ fontSize: '18px', color: '#fa8c16' }}>
+                                {editingItem.inventory_items.max_qty !== null ? editingItem.inventory_items.max_qty : '-'}
+                            </Text>
+                        </div>
+                        <div style={{ width: '1px', background: '#d9d9d9', margin: '0 8px' }}></div>
+                        <div style={{ textAlign: 'center' }}>
+                            <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>Balance</Text>
+                            <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
+                                {editingItem.inventory_items.balance !== null ? editingItem.inventory_items.balance : '-'}
+                            </Text>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: '16px', background: '#f0f2f5', borderRadius: '8px' }}>
+                        <Space align="center" size="middle" direction="vertical" style={{ width: '100%' }}>
+                            <Text strong style={{ fontSize: '15px' }}>Request Quantity</Text>
+                            <InputNumber
+                                min={0}
+                                value={localQuantity}
+                                onChange={setLocalQuantity}
+                                size="large"
+                                autoFocus
+                                inputMode="numeric"
+                                style={{ width: '120px' }}
+                            />
+                        </Space>
+
+                    </div>
+                    {/* Indent Remarks (if available) */}
+                    {editingItem.indent_remarks && (
+                        <div style={{
+                            marginTop: 16,
+                            marginBottom: 16,
+                            padding: '8px 12px',
+                            background: '#e6f7ff',
+                            border: '1px solid #91d5ff',
+                            borderRadius: '4px',
+                            textAlign: 'left'
+                        }}>
+                            <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+                                Remarks:
+                            </Text>
+                            <Text>{editingItem.indent_remarks}</Text>
+                        </div>
+                    )}
+                </div>
+            )}
+        </Modal>
+    );
+};
+
 const CartPage = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -45,7 +161,6 @@ const CartPage = () => {
     // Edit Modal State
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
-    const [newQuantity, setNewQuantity] = useState(0);
     const [updatingQty, setUpdatingQty] = useState(false);
 
     // PhIS Automation State
@@ -60,9 +175,9 @@ const CartPage = () => {
         fetchCartSessions();
     }, []);
 
-    const fetchCartSessions = async () => {
+    const fetchCartSessions = async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
 
             // Fetch sessions that are "Submitted" (Pending Issuer Action)
             const { sessionsData, requestsData } = await api.get('/indents/cart');
@@ -150,11 +265,11 @@ const CartPage = () => {
             console.error('Error fetching cart items:', error);
             message.error('Failed to load cart items');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
-    const handleUpdateQuantity = async () => {
+    const handleUpdateQuantity = async (updatedQuantity) => {
         if (!editingItem) return;
 
         try {
@@ -162,15 +277,15 @@ const CartPage = () => {
 
             if (editingItem.original_req_id) {
                 // Update Ad-hoc Request
-                await api.put(`/indents/${editingItem.original_req_id}`, { requested_qty: newQuantity });
+                await api.put(`/indents/${editingItem.original_req_id}`, { requested_qty: updatedQuantity });
             } else {
                 // Update Session Item
-                await api.put(`/indent_items/${editingItem.id}`, { requested_qty: newQuantity });
+                await api.put(`/indent_items/${editingItem.id}`, { requested_qty: updatedQuantity });
             }
 
             message.success('Quantity updated successfully');
             setEditModalVisible(false);
-            fetchCartSessions(); // Refresh data
+            fetchCartSessions(true); // Refresh data silently without spinner
         } catch (error) {
             console.error('Error updating quantity:', error);
             message.error('Failed to update quantity');
@@ -661,7 +776,6 @@ const CartPage = () => {
                                             }}
                                             onClick={() => {
                                                 setEditingItem(item);
-                                                setNewQuantity(item.requested_qty);
                                                 setEditModalVisible(true);
                                             }}
                                             className="hover:bg-gray-50 transition-colors"
@@ -729,109 +843,13 @@ const CartPage = () => {
                 )}
             </Space>
 
-            <Modal
-                title="Edit Quantity"
-                open={editModalVisible}
+            <EditQuantityModal
+                visible={editModalVisible}
                 onCancel={() => setEditModalVisible(false)}
-                confirmLoading={updatingQty}
-                width={'450px'}
                 onOk={handleUpdateQuantity}
-            >
-                {editingItem && editingItem.inventory_items && (
-                    <div style={{ padding: '10px 0', textAlign: 'center' }}>
-                        <Title level={4} style={{ marginBottom: 4 }}>
-                            {editingItem.inventory_items.name}
-                        </Title>
-
-                        {/* Item Code and PKU */}
-                        <Space size="large" style={{ marginBottom: 12 }}>
-                            {editingItem.inventory_items.item_code && (
-                                <Text type="secondary" style={{ fontSize: '13px' }}>
-                                    <Text>{editingItem.inventory_items.item_code}</Text>
-                                </Text>
-                            )}
-                            {editingItem.inventory_items.pku && (
-                                <Text type="secondary" style={{ fontSize: '13px' }}>
-                                    PKU: <Text strong>{editingItem.inventory_items.pku}</Text>
-                                </Text>
-                            )}
-                        </Space> <br />
-
-                        {/* Tags */}
-                        <Space wrap style={{ marginBottom: 12, justifyContent: 'center' }}>
-                            {editingItem.inventory_items.puchase_type && (
-                                <Tag color={getPuchaseTypeColor(editingItem.inventory_items.puchase_type)}>
-                                    {editingItem.inventory_items.puchase_type}
-                                </Tag>
-                            )}
-                            {editingItem.inventory_items.std_kt && (
-                                <Tag color={getStdKtColor(editingItem.inventory_items.std_kt)}>
-                                    {editingItem.inventory_items.std_kt}
-                                </Tag>
-                            )}
-                            {editingItem.inventory_items.row && <Tag>Row: {editingItem.inventory_items.row}</Tag>}
-                        </Space>
-
-                        {/* Inventory Info */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-around',
-                            background: '#fafafa',
-                            padding: '12px 0',
-                            borderRadius: '6px',
-                            border: '1px solid #f0f0f0',
-                            marginBottom: 16
-                        }}>
-                            <div style={{ textAlign: 'center' }}>
-                                <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>Max Qty</Text>
-                                <Text strong style={{ fontSize: '18px', color: '#fa8c16' }}>
-                                    {editingItem.inventory_items.max_qty !== null ? editingItem.inventory_items.max_qty : '-'}
-                                </Text>
-                            </div>
-                            <div style={{ width: '1px', background: '#d9d9d9', margin: '0 8px' }}></div>
-                            <div style={{ textAlign: 'center' }}>
-                                <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>Balance</Text>
-                                <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
-                                    {editingItem.inventory_items.balance !== null ? editingItem.inventory_items.balance : '-'}
-                                </Text>
-                            </div>
-                        </div>
-
-                        <div style={{ padding: '16px', background: '#f0f2f5', borderRadius: '8px' }}>
-                            <Space align="center" size="middle" direction="vertical" style={{ width: '100%' }}>
-                                <Text strong style={{ fontSize: '15px' }}>Request Quantity</Text>
-                                <InputNumber
-                                    min={0}
-                                    value={newQuantity}
-                                    onChange={setNewQuantity}
-                                    size="large"
-                                    autoFocus
-                                    inputMode="numeric"
-                                    style={{ width: '120px' }}
-                                />
-                            </Space>
-
-                        </div>
-                        {/* Indent Remarks (if available) */}
-                        {editingItem.indent_remarks && (
-                            <div style={{
-                                marginTop: 16,
-                                marginBottom: 16,
-                                padding: '8px 12px',
-                                background: '#e6f7ff',
-                                border: '1px solid #91d5ff',
-                                borderRadius: '4px',
-                                textAlign: 'left'
-                            }}>
-                                <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                                    Remarks:
-                                </Text>
-                                <Text>{editingItem.indent_remarks}</Text>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </Modal>
+                editingItem={editingItem}
+                updatingQty={updatingQty}
+            />
 
 
             <Modal
