@@ -15,6 +15,7 @@ const RoutineIndentPage = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [loadingItem, setLoadingItem] = useState(false);
     const [sessionId, setSessionId] = useState(null);
 
     // Store user inputs for the current item
@@ -208,9 +209,14 @@ const RoutineIndentPage = () => {
         if (success) {
             if (currentIndex < items.length - 1) {
                 const nextIndex = currentIndex + 1;
-                setCurrentIndex(nextIndex);
-                api.put(`/indent_sessions/${sessionId}`, { last_item: items[nextIndex].id }).catch(console.error);
-                await loadItemData(items[nextIndex].id, sessionId);
+                setLoadingItem(true);
+                try {
+                    api.put(`/indent_sessions/${sessionId}`, { last_item: items[nextIndex].id }).catch(console.error);
+                    await loadItemData(items[nextIndex].id, sessionId);
+                    setCurrentIndex(nextIndex);
+                } finally {
+                    setLoadingItem(false);
+                }
             } else {
                 // Done! Navigate to summary
                 navigate('/routine-summary');
@@ -222,9 +228,14 @@ const RoutineIndentPage = () => {
         const success = await saveCurrentData();
         if (success && currentIndex > 0) {
             const prevIndex = currentIndex - 1;
-            setCurrentIndex(prevIndex);
-            api.put(`/indent_sessions/${sessionId}`, { last_item: items[prevIndex].id }).catch(console.error);
-            await loadItemData(items[prevIndex].id, sessionId);
+            setLoadingItem(true);
+            try {
+                api.put(`/indent_sessions/${sessionId}`, { last_item: items[prevIndex].id }).catch(console.error);
+                await loadItemData(items[prevIndex].id, sessionId);
+                setCurrentIndex(prevIndex);
+            } finally {
+                setLoadingItem(false);
+            }
         }
     };
 
@@ -255,172 +266,185 @@ const RoutineIndentPage = () => {
                 <div style={{ height: '100%', background: '#1890ff', width: `${progressPercent}%`, transition: 'width 0.3s' }} />
             </div>
 
-            <Card
-                title={
-                    <div>
-                        <div style={{ fontSize: '20px', whiteSpace: 'normal', lineHeight: '1.4', paddingTop: '10px' }}>{currentItem.name}</div>
-                        {currentItem.pku && (
-                            <div style={{
-                                display: 'inline-block',
-                                background: '#ffe58f',
-                                color: '#d46b08',
-                                padding: '4px 12px',
-                                borderRadius: 16,
-                                fontWeight: 'bold',
-                                border: '1px solid #ffd591',
-                                marginTop: '10px',
-                                fontSize: '14px',
-                                marginBottom: '10px'
-                            }}>
-                                {currentItem.pku}
-                            </div>
-                        )}
-                    </div>
-                }
-                bodyStyle={{ padding: 24 }}
-            >
-                <Row gutter={[24, 24]}>
-                    <Col xs={24} sm={12}>
-                        <div style={{ marginBottom: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
-                            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-                                <div style={{ flex: 1 }}>
-                                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Max Qty</Text>
-                                    <InputNumber
-                                        size="large"
-                                        min={0}
-                                        value={currentMaxQty}
-                                        inputMode="numeric"
-                                        onChange={(val) => {
-                                            setCurrentMaxQty(val);
-                                            if (currentBalance !== null && val !== null) {
-                                                setCurrentQty(Math.max(0, val - currentBalance));
-                                            }
-                                        }}
-                                        style={{ width: '100%' }}
-                                        readOnly
-                                    />
-                                </div>
-
-                                <div style={{ flex: 1 }}>
-                                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Balance</Text>
-                                    <InputNumber
-                                        size="large"
-                                        min={0}
-                                        placeholder="Balance"
-                                        value={currentBalance}
-                                        inputMode="numeric"
-                                        onChange={(val) => {
-                                            setCurrentBalance(val);
-                                            const max = currentMaxQty || 0;
-                                            if (val !== null) {
-                                                const calcQty = Math.max(0, max - val);
-                                                setCurrentQty(calcQty);
-                                            }
-                                        }}
-                                        style={{ width: '100%' }}
-                                    />
-                                </div>
-                            </div>
-
-                            <hr style={{ border: 0, borderTop: '1px dashed #d9d9d9', margin: '16px 0' }} />
-
-                            <div style={{}}>
-                                <Text strong style={{ display: 'block', marginBottom: 8 }}>Indent Qty</Text>
-                                <InputNumber
-                                    size="large"
-                                    min={0}
-                                    value={currentQty}
-                                    inputMode="numeric"
-                                    onChange={setCurrentQty}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                        </div>
-
+            <Spin spinning={loadingItem} tip="Loading Item Data...">
+                <Card
+                    title={
                         <div>
-                            <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Remarks (for Issuer)</Text>
-                            <TextArea
-                                rows={3}
-                                placeholder="Enter any specific notes..."
-                                value={currentRemarks}
-                                onChange={(e) => setCurrentRemarks(e.target.value)}
-                            />
-                        </div>
-                    </Col>
-
-                    <Col xs={24} sm={12}>
-                        <Card size="small" style={{ background: '#fafafa' }}>
-                            <Checkbox
-                                checked={enableShortExp}
-                                onChange={(e) => setEnableShortExp(e.target.checked)}
-                                style={{ marginBottom: 16, fontWeight: 500 }}
-                            >
-                                Has Short Expiry?
-                            </Checkbox>
-
-                            {enableShortExp && (
-                                <div style={{ marginTop: 16 }}>
-                                    <div style={{ marginBottom: 16, padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
-                                        <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 1</Text>
-                                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                            <Input
-                                                placeholder="Batch No"
-                                                value={shortExp1.batch}
-                                                onChange={e => setShortExp1({ ...shortExp1, batch: e.target.value })}
-                                            />
-                                            <InputNumber
-                                                placeholder="Qty"
-                                                min={0}
-                                                value={shortExp1.qty}
-                                                inputMode="numeric"
-                                                onChange={v => setShortExp1({ ...shortExp1, qty: v })}
-                                            />
-                                        </div>
-                                        <DatePicker
-                                            placeholder="Expiry Date"
-                                            style={{ width: '100%' }}
-                                            value={shortExp1.date}
-                                            onChange={d => setShortExp1({ ...shortExp1, date: d })}
-                                        />
-                                    </div>
-
-                                    <div style={{ padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
-                                        <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 2</Text>
-                                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                            <Input
-                                                placeholder="Batch No"
-                                                value={shortExp2.batch}
-                                                onChange={e => setShortExp2({ ...shortExp2, batch: e.target.value })}
-                                            />
-                                            <InputNumber
-                                                placeholder="Qty"
-                                                min={0}
-                                                value={shortExp2.qty}
-                                                inputMode="numeric"
-                                                onChange={v => setShortExp2({ ...shortExp2, qty: v })}
-                                            />
-                                        </div>
-                                        <DatePicker
-                                            placeholder="Expiry Date"
-                                            style={{ width: '100%' }}
-                                            value={shortExp2.date}
-                                            onChange={d => setShortExp2({ ...shortExp2, date: d })}
-                                        />
-                                    </div>
+                            <div style={{ fontSize: '20px', whiteSpace: 'normal', lineHeight: '1.4', paddingTop: '10px' }}>{currentItem.name}</div>
+                            {currentItem.pku && (
+                                <div style={{
+                                    display: 'inline-block',
+                                    background: '#ffe58f',
+                                    color: '#d46b08',
+                                    padding: '4px 12px',
+                                    borderRadius: 16,
+                                    fontWeight: 'bold',
+                                    border: '1px solid #ffd591',
+                                    marginTop: '10px',
+                                    fontSize: '14px',
+                                    marginBottom: '10px'
+                                }}>
+                                    {currentItem.pku}
                                 </div>
                             )}
-                        </Card>
-                    </Col>
-                </Row>
-            </Card>
+                        </div>
+                    }
+                    bodyStyle={{ padding: 24 }}
+                >
+                    <Row gutter={[24, 24]}>
+                        <Col xs={24} sm={12}>
+                            <div style={{ marginBottom: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                                    <div style={{ flex: 1 }}>
+                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Max Qty</Text>
+                                        <InputNumber
+                                            size="large"
+                                            min={0}
+                                            value={currentMaxQty}
+                                            inputMode="numeric"
+                                            onChange={(val) => {
+                                                setCurrentMaxQty(val);
+                                                if (currentBalance !== null && val !== null) {
+                                                    setCurrentQty(Math.max(0, val - currentBalance));
+                                                }
+                                            }}
+                                            style={{ width: '100%' }}
+                                            readOnly
+                                            disabled={loadingItem}
+                                        />
+                                    </div>
+
+                                    <div style={{ flex: 1 }}>
+                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Balance</Text>
+                                        <InputNumber
+                                            size="large"
+                                            min={0}
+                                            placeholder="Balance"
+                                            value={currentBalance}
+                                            inputMode="numeric"
+                                            onChange={(val) => {
+                                                setCurrentBalance(val);
+                                                const max = currentMaxQty || 0;
+                                                if (val !== null) {
+                                                    const calcQty = Math.max(0, max - val);
+                                                    setCurrentQty(calcQty);
+                                                }
+                                            }}
+                                            style={{ width: '100%' }}
+                                            disabled={loadingItem}
+                                        />
+                                    </div>
+                                </div>
+
+                                <hr style={{ border: 0, borderTop: '1px dashed #d9d9d9', margin: '16px 0' }} />
+
+                                <div style={{}}>
+                                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Indent Qty</Text>
+                                    <InputNumber
+                                        size="large"
+                                        min={0}
+                                        value={currentQty}
+                                        inputMode="numeric"
+                                        onChange={setCurrentQty}
+                                        style={{ width: '100%' }}
+                                        disabled={loadingItem}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Remarks (for Issuer)</Text>
+                                <TextArea
+                                    rows={3}
+                                    placeholder="Enter any specific notes..."
+                                    value={currentRemarks}
+                                    onChange={(e) => setCurrentRemarks(e.target.value)}
+                                    disabled={loadingItem}
+                                />
+                            </div>
+                        </Col>
+
+                        <Col xs={24} sm={12}>
+                            <Card size="small" style={{ background: '#fafafa' }}>
+                                <Checkbox
+                                    checked={enableShortExp}
+                                    onChange={(e) => setEnableShortExp(e.target.checked)}
+                                    style={{ marginBottom: 16, fontWeight: 500 }}
+                                    disabled={loadingItem}
+                                >
+                                    Has Short Expiry?
+                                </Checkbox>
+
+                                {enableShortExp && (
+                                    <div style={{ marginTop: 16 }}>
+                                        <div style={{ marginBottom: 16, padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
+                                            <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 1</Text>
+                                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                                                <Input
+                                                    placeholder="Batch No"
+                                                    value={shortExp1.batch}
+                                                    onChange={e => setShortExp1({ ...shortExp1, batch: e.target.value })}
+                                                    disabled={loadingItem}
+                                                />
+                                                <InputNumber
+                                                    placeholder="Qty"
+                                                    min={0}
+                                                    value={shortExp1.qty}
+                                                    inputMode="numeric"
+                                                    onChange={v => setShortExp1({ ...shortExp1, qty: v })}
+                                                    disabled={loadingItem}
+                                                />
+                                            </div>
+                                            <DatePicker
+                                                placeholder="Expiry Date"
+                                                style={{ width: '100%' }}
+                                                value={shortExp1.date}
+                                                onChange={d => setShortExp1({ ...shortExp1, date: d })}
+                                                disabled={loadingItem}
+                                            />
+                                        </div>
+
+                                        <div style={{ padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
+                                            <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 2</Text>
+                                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                                                <Input
+                                                    placeholder="Batch No"
+                                                    value={shortExp2.batch}
+                                                    onChange={e => setShortExp2({ ...shortExp2, batch: e.target.value })}
+                                                    disabled={loadingItem}
+                                                />
+                                                <InputNumber
+                                                    placeholder="Qty"
+                                                    min={0}
+                                                    value={shortExp2.qty}
+                                                    inputMode="numeric"
+                                                    onChange={v => setShortExp2({ ...shortExp2, qty: v })}
+                                                    disabled={loadingItem}
+                                                />
+                                            </div>
+                                            <DatePicker
+                                                placeholder="Expiry Date"
+                                                style={{ width: '100%' }}
+                                                value={shortExp2.date}
+                                                onChange={d => setShortExp2({ ...shortExp2, date: d })}
+                                                disabled={loadingItem}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </Card>
+                        </Col>
+                    </Row>
+                </Card>
+            </Spin>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, padding: '0 16px' }}>
                 <Button
                     size="large"
                     icon={<LeftOutlined />}
-                    disabled={currentIndex === 0}
+                    disabled={currentIndex === 0 || loadingItem}
                     onClick={handlePrevious}
-                    loading={saving}
+                    loading={saving || loadingItem}
                 >
                     Previous
                 </Button>
