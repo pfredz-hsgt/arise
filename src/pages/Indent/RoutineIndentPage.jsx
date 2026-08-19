@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Typography, Card, Button, InputNumber, Input, Row, Col, Spin, message, DatePicker, Checkbox, Steps, Space } from 'antd';
+import { Typography, Card, Button, InputNumber, Input, Row, Col, Spin, message, DatePicker, Checkbox, Steps, Space, Collapse } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -35,6 +35,15 @@ const RoutineIndentPage = () => {
     const rak = searchParams.get('rak');
     const resumeItemId = searchParams.get('resumeItemId');
     const initRakRef = useRef(null);
+    const balanceInputRef = useRef(null);
+
+    useEffect(() => {
+        if (!loading && !loadingItem && balanceInputRef.current) {
+            setTimeout(() => {
+                balanceInputRef.current?.focus({ cursor: 'end' });
+            }, 50);
+        }
+    }, [currentIndex, loading, loadingItem]);
 
     useEffect(() => {
         if (!rak) {
@@ -240,7 +249,7 @@ const RoutineIndentPage = () => {
     };
 
     if (loading) {
-        return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" tip="Loading Routine..." /></div>;
+        return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" tip="Loading Page..." /></div>;
     }
 
     if (items.length === 0) return null;
@@ -317,6 +326,7 @@ const RoutineIndentPage = () => {
                                     <div style={{ flex: 1 }}>
                                         <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Balance</Text>
                                         <InputNumber
+                                            ref={balanceInputRef}
                                             size="large"
                                             min={0}
                                             placeholder="Balance"
@@ -352,16 +362,24 @@ const RoutineIndentPage = () => {
                                 </div>
                             </div>
 
-                            <div>
-                                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Remarks (for Issuer)</Text>
-                                <TextArea
-                                    rows={3}
-                                    placeholder="Enter any specific notes..."
-                                    value={currentRemarks}
-                                    onChange={(e) => setCurrentRemarks(e.target.value)}
-                                    disabled={loadingItem}
-                                />
-                            </div>
+                            <Collapse
+                                ghost
+                                items={[
+                                    {
+                                        key: '1',
+                                        label: <Text type="secondary">Remarks (for Issuer)</Text>,
+                                        children: (
+                                            <TextArea
+                                                rows={3}
+                                                placeholder="Enter any specific notes..."
+                                                value={currentRemarks}
+                                                onChange={(e) => setCurrentRemarks(e.target.value)}
+                                                disabled={loadingItem}
+                                            />
+                                        ),
+                                    },
+                                ]}
+                            />
                         </Col>
 
                         <Col xs={24} sm={12}>
@@ -372,7 +390,7 @@ const RoutineIndentPage = () => {
                                     style={{ marginBottom: 16, fontWeight: 500 }}
                                     disabled={loadingItem}
                                 >
-                                    Has Short Expiry?
+                                    Short Expiry Items?
                                 </Checkbox>
 
                                 {enableShortExp && (
@@ -453,7 +471,7 @@ const RoutineIndentPage = () => {
                     type="primary"
                     size="large"
                     onClick={handleNext}
-                    loading={saving}
+                    loading={saving || loadingItem}
                 >
                     {currentIndex === items.length - 1 ? 'Finish' : 'Next'} <RightOutlined />
                 </Button>

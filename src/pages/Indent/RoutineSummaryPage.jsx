@@ -98,7 +98,7 @@ const RoutineSummaryPage = () => {
         setEditBalance(record.inventory_items?.balance || 0);
         setEditQty(record.requested_qty || 0);
         setEditRemarks(record.indent_remarks || '');
-        
+
         const hasShortExp = record.batch_no_1 || record.batch_no_2;
         setEditEnableShortExp(!!hasShortExp);
         setEditShortExp1({
@@ -178,8 +178,8 @@ const RoutineSummaryPage = () => {
             if (editBalance !== editingItem.inventory_items?.balance) {
                 inventoryUpdates.balance = editBalance;
                 await api.put(`/inventory/${editingItem.item_id}`, inventoryUpdates);
-                setIndentItems(prevItems => 
-                    prevItems.map(item => 
+                setIndentItems(prevItems =>
+                    prevItems.map(item =>
                         item.id === editingItem.id ? { ...item, inventory_items: { ...item.inventory_items, ...inventoryUpdates } } : item
                     )
                 );
@@ -437,7 +437,7 @@ const RoutineSummaryPage = () => {
             </div>
 
             <Modal
-                title={`Edit Indent Item: ${editingItem?.inventory_items?.name || ''}`}
+                title={`${editingItem?.inventory_items?.name} (${editingItem?.inventory_items?.pku})`}
                 open={!!editingItem}
                 onCancel={() => setEditingItem(null)}
                 onOk={handleSaveEdit}
@@ -473,6 +473,8 @@ const RoutineSummaryPage = () => {
                                             size="large"
                                             min={0}
                                             value={editBalance}
+                                            inputMode="numeric"
+                                            autoFocus
                                             onChange={(val) => {
                                                 setEditBalance(val);
                                                 const max = editMaxQty || 0;
