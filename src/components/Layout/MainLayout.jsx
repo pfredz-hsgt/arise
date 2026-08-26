@@ -345,8 +345,8 @@ const MainLayout = () => {
                             </Form.Item>
                         </>
                     )}
-                    <Collapse ghost style={{ marginBottom: 0 }}>
-                        <Collapse.Panel header="Change Password (Optional)" key="1">
+                    <Collapse ghost style={{ marginBottom: 0 }} defaultActiveKey={isForcedChange ? ['1'] : undefined}>
+                        <Collapse.Panel header={isForcedChange ? "You must change your password" : "Change your password"} key="1">
                             <Form.Item
                                 name="newPassword"
                                 label={isForcedChange ? "New Password" : "New Password (leave blank to keep current)"}
