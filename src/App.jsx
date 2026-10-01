@@ -14,6 +14,7 @@ import RoutineSummaryPage from './pages/Indent/RoutineSummaryPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ShortExpPage from './pages/Shortexp/ShortExpPage';
 import ShortExpEntry from './pages/Shortexp/ShortExpEntry';
+import ShortExpArchive from './pages/Shortexp/ShortExpArchive';
 import { Spin } from 'antd';
 import { initColors } from './lib/colorMappings';
 
@@ -63,6 +64,7 @@ function App() {
                         <Route path="routine-summary" element={<RoutineSummaryPage />} />
                         <Route path="shortexp" element={<ShortExpPage />} />
                         <Route path="shortexp-entry" element={<ShortExpEntry />} />
+                        <Route path="shortexp-archive" element={<ShortExpArchive />} />
 
                         {/* Issuer Only Routes */}
                         <Route path="cart" element={<ProtectedRoute requireIssuer={true}><CartPage /></ProtectedRoute>} />

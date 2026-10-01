@@ -17,7 +17,7 @@ const ShortExpTabs = ({ batches, onChange, disabled }) => {
     const handleEdit = (targetKey, action) => {
         if (action === 'add') {
             const newKey = `batch_${Date.now()}`;
-            const newBatches = [...batches, { key: newKey, id: null, batch_no: '', date: null, qty: null }];
+            const newBatches = [...batches, { key: newKey, id: null, batch_no: '', date: null, qty: null, se_remarks: '' }];
             onChange(newBatches);
             setActiveKey(newKey);
         } else if (action === 'remove') {
@@ -70,6 +70,16 @@ const ShortExpTabs = ({ batches, onChange, disabled }) => {
                                     value={batch.date}
                                     onChange={d => handleChange(batch.key, 'date', d)}
                                     format="DD/MM/YYYY"
+                                    disabled={disabled}
+                                />
+                            </div>
+                            <div>
+                                <Text type="secondary" style={{ fontSize: '12px', marginBottom: '4px', display: 'block' }}>Remarks</Text>
+                                <Input.TextArea
+                                    rows={2}
+                                    placeholder="E.g. dispose, offered to other tech..."
+                                    value={batch.se_remarks}
+                                    onChange={e => handleChange(batch.key, 'se_remarks', e.target.value)}
                                     disabled={disabled}
                                 />
                             </div>

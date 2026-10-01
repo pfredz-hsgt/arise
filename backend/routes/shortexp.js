@@ -126,4 +126,62 @@ router.post('/remark', authenticateToken, async (req, res) => {
     }
 });
 
+// Archive current records
+router.post('/archive', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // Copy to archive
+        await client.query(`
+            INSERT INTO kewps6_archive 
+            (item_id, batch_no, exp_date, se_remarks, qty_1m, qty_2m, qty_3m, qty_4m, qty_5m, qty_6m, qty, archived_by)
+            SELECT item_id, batch_no, exp_date, se_remarks, qty_1m, qty_2m, qty_3m, qty_4m, qty_5m, qty_6m, qty, $1
+            FROM kewps6_records
+        `, [req.user.name || req.user.username || 'Admin']);
+        
+        // Clear current records
+        await client.query('DELETE FROM kewps6_records');
+        
+        await client.query('COMMIT');
+        res.json({ success: true });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+// Get unique archived dates
+router.get('/archive/dates', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DISTINCT DATE(archived_date) as archived_date 
+            FROM kewps6_archive 
+            ORDER BY archived_date DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get archived data by date
+router.get('/archive/data', authenticateToken, async (req, res) => {
+    const { date } = req.query;
+    try {
+        const result = await pool.query(`
+            SELECT k.*, row_to_json(inv.*) as inventory_items 
+            FROM kewps6_archive k
+            LEFT JOIN inventory_items inv ON k.item_id = inv.id
+            WHERE DATE(k.archived_date) = $1
+            ORDER BY k.exp_date ASC
+        `, [date]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 export default router;

@@ -191,3 +191,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+
+CREATE TABLE IF NOT EXISTS kewps6_archive (
+    id SERIAL PRIMARY KEY,
+    item_id UUID REFERENCES inventory_items(id) ON DELETE CASCADE,
+    batch_no VARCHAR(100),
+    exp_date DATE,
+    se_remarks TEXT,
+    qty_1m INTEGER,
+    qty_2m INTEGER,
+    qty_3m INTEGER,
+    qty_4m INTEGER,
+    qty_5m INTEGER,
+    qty_6m INTEGER,
+    qty INTEGER,
+    archived_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    archived_by VARCHAR(255)
+);

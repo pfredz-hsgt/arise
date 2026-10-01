@@ -1,54 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Space,
     Typography,
     Table,
     Tag,
     message,
-    Input,
     Card,
     Spin,
     Button,
-    Modal,
-    Form,
-    Popconfirm,
-    Row,
-    Col,
-    DatePicker,
-    InputNumber,
     Grid,
-    List
+    List,
+    Select
 } from 'antd';
 import {
     CalendarOutlined,
-    WarningOutlined,
-    FileExcelOutlined,
-    MoreOutlined,
-    DeleteOutlined,
-    InboxOutlined
+    HistoryOutlined,
+    FileExcelOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
 import { getSourceColor } from '../../lib/colorMappings';
-import { useNavigate } from 'react-router-dom';
-import ShortExpModal from '../../components/ShortExpModal';
-import { useAuth } from '../../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
+const { Option } = Select;
 
-const ShortExpPage = () => {
+const ShortExpArchive = () => {
     const screens = useBreakpoint();
     const isDesktop = screens.lg;
-    const { user } = useAuth();
-
-    const navigate = useNavigate();
+    
     const [loading, setLoading] = useState(true);
     const [drugs, setDrugs] = useState([]);
-
-    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-    const [editingItem, setEditingItem] = useState(null);
+    const [archiveDates, setArchiveDates] = useState([]);
+    const [selectedDate, setSelectedDate] = useState(null);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
@@ -61,15 +46,38 @@ const ShortExpPage = () => {
     };
 
     useEffect(() => {
-        fetchShortExpDrugs();
+        fetchArchiveDates();
     }, []);
 
-    const fetchShortExpDrugs = async () => {
+    useEffect(() => {
+        if (selectedDate) {
+            fetchArchiveData(selectedDate);
+        } else {
+            setDrugs([]);
+        }
+    }, [selectedDate]);
+
+    const fetchArchiveDates = async () => {
+        try {
+            const data = await api.get('/shortexp/archive/dates');
+            const dates = data.map(d => dayjs(d.archived_date).format('YYYY-MM-DD'));
+            setArchiveDates(dates);
+            if (dates.length > 0) {
+                setSelectedDate(dates[0]);
+            } else {
+                setLoading(false);
+            }
+        } catch (error) {
+            console.error('Error fetching archive dates:', error);
+            message.error('Failed to load archive dates');
+            setLoading(false);
+        }
+    };
+
+    const fetchArchiveData = async (date) => {
         try {
             setLoading(true);
-
-            // Fetch from custom API
-            const data = await api.get('/shortexp');
+            const data = await api.get(`/shortexp/archive/data?date=${date}`);
 
             const rows = data.map(record => {
                 const invItem = record.inventory_items || {};
@@ -86,39 +94,18 @@ const ShortExpPage = () => {
                     exp_date: record.exp_date,
                     qty: record.qty || 0,
                     se_remarks: record.se_remarks || '',
+                    archived_by: record.archived_by || 'Unknown'
                 };
             });
 
-            // Sort by exp_date
             rows.sort((a, b) => dayjs(a.exp_date).diff(dayjs(b.exp_date)));
-
             setDrugs(rows);
         } catch (error) {
-            console.error('Error fetching short expiry items:', error);
-            message.error('Failed to load short expiry items');
+            console.error('Error fetching archived items:', error);
+            message.error('Failed to load archived items');
         } finally {
             setLoading(false);
         }
-    };
-
-
-    const openEditModal = (record) => {
-        setEditingItem({
-            id: record.item_id,
-            name: record.name,
-            pku: record.pku,
-            puchase_type: record.puchase_type,
-            std_kt: record.std_kt,
-            row: record.rak,
-            indent_source: record.indent_source
-        });
-        setIsEditModalVisible(true);
-    };
-
-    const handleEditModalClose = () => {
-        setIsEditModalVisible(false);
-        setEditingItem(null);
-        fetchShortExpDrugs();
     };
 
     const getQtyForColumn = (record, targetMonth) => {
@@ -133,7 +120,7 @@ const ShortExpPage = () => {
 
     const exportToExcel = () => {
         const wsData = [
-            ['Drug Name', 'PKU', 'Purchase Type', 'Std Kt', 'Indent Source', 'Batch No', 'Expiry Date', '6M', '5M', '4M', '3M', '2M', '1M', 'Remarks'],
+            ['Drug Name', 'PKU', 'Purchase Type', 'Std Kt', 'Indent Source', 'Batch No', 'Expiry Date', '6M', '5M', '4M', '3M', '2M', '1M', 'Remarks', 'Archived By'],
             ...drugs.map(item => {
                 const qty6 = getQtyForColumn(item, 6);
                 const qty5 = getQtyForColumn(item, 5);
@@ -156,7 +143,8 @@ const ShortExpPage = () => {
                     qty3 !== null ? qty3 : '-',
                     qty2 !== null ? qty2 : '-',
                     qty1 !== null ? qty1 : '-',
-                    item.se_remarks || ''
+                    item.se_remarks || '',
+                    item.archived_by || ''
                 ];
             })
         ];
@@ -165,13 +153,13 @@ const ShortExpPage = () => {
         ws['!cols'] = [
             { wch: 40 }, { wch: 15 }, { wch: 5 }, { wch: 5 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
             { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 },
-            { wch: 30 }
+            { wch: 30 }, { wch: 20 }
         ];
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Short Expiry");
+        XLSX.utils.book_append_sheet(wb, ws, "Short Expiry Archive");
 
-        const filename = `ShortExp_${dayjs().format('YYYYMMDD')}.xlsx`;
+        const filename = `ShortExpArchive_${selectedDate || dayjs().format('YYYYMMDD')}.xlsx`;
         XLSX.writeFile(wb, filename);
     };
 
@@ -218,9 +206,6 @@ const ShortExpPage = () => {
                             <CalendarOutlined style={{ color: '#fa8c16' }} />
                             <Text>{dayjs(date).format('DD/MM/YYYY')}</Text>
                         </Space>
-                        <Text style={{ color: isUrgent ? 'red' : 'inherit', fontSize: '12px' }}>
-                            ({daysLeft} Days)
-                        </Text>
                     </Space>
                 );
             },
@@ -289,41 +274,30 @@ const ShortExpPage = () => {
             title: 'Remarks',
             dataIndex: 'se_remarks',
             key: 'se_remarks',
-            width: 250,
+            width: 200,
             render: (val) => <Text>{val || '-'}</Text>
+        },
+        {
+            title: 'Archived By',
+            dataIndex: 'archived_by',
+            key: 'archived_by',
+            width: 150,
+            render: (val) => <Text>{val || 'Unknown'}</Text>
         }
     ];
 
-    const handleArchiveAndClear = async () => {
-        try {
-            setLoading(true);
-            await api.post('/shortexp/archive');
-            message.success('Data archived and cleared successfully!');
-            fetchShortExpDrugs();
-        } catch (error) {
-            console.error('Failed to archive data:', error);
-            message.error('Failed to archive and clear data');
-            setLoading(false);
-        }
-    };
-
     const renderListItem = (record) => {
-        const daysLeft = dayjs(record.exp_date).startOf('day').diff(dayjs().startOf('day'), 'day');
-        const isUrgent = daysLeft < 30;
-
         return (
             <List.Item>
-                <Card
-                    size="small"
-                    onClick={() => openEditModal(record)}
-                    style={{ cursor: 'pointer', borderLeft: isUrgent ? '4px solid #f5222d' : '4px solid #fa8c16' }}
-                    hoverable
+                <Card 
+                    size="small" 
+                    style={{ borderLeft: '4px solid #d9d9d9' }}
                 >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <Text strong style={{ fontSize: 16 }}>{record.name}</Text>
                         <Tag color="geekblue">{record.batch_no}</Tag>
                     </div>
-
+                    
                     <Space size="small" wrap style={{ marginBottom: 12 }}>
                         {record.pku && <Tag color="magenta" style={{ fontSize: '12px' }}>{record.pku}</Tag>}
                         {record.rak && <Tag color="blue" style={{ fontSize: '10px' }}>Rak: {record.rak}</Tag>}
@@ -335,30 +309,30 @@ const ShortExpPage = () => {
                             <Space>
                                 <CalendarOutlined style={{ color: '#fa8c16' }} />
                                 <Text strong>{dayjs(record.exp_date).format('DD/MM/YYYY')}</Text>
-                                <Text style={{ color: isUrgent ? 'red' : 'inherit', fontSize: '12px' }}>
-                                    ({daysLeft} Days)
-                                </Text>
                             </Space>
                         </Space>
-
+                        
                         <div style={{ textAlign: 'right' }}>
                             <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Total Qty</Text>
                             <Text strong style={{ fontSize: 16 }}>{record.qty || '-'}</Text>
                         </div>
                     </div>
-
+                    
                     {record.se_remarks && (
                         <div style={{ marginTop: 12, padding: 8, background: '#fafafa', borderRadius: 4 }}>
                             <Text type="secondary" style={{ fontSize: 12 }}>Remarks: </Text>
                             <Text>{record.se_remarks}</Text>
                         </div>
                     )}
+                    <div style={{ marginTop: 8 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>Archived by: {record.archived_by}</Text>
+                    </div>
                 </Card>
             </List.Item>
         );
     };
 
-    if (loading && drugs.length === 0) {
+    if (loading && archiveDates.length === 0) {
         return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" /></div>;
     }
 
@@ -370,42 +344,34 @@ const ShortExpPage = () => {
                     <div>
                         <Title level={3} style={{ margin: 0, marginBottom: 8 }}>
                             <Space>
-                                <WarningOutlined style={{ color: '#fa8c16' }} />
-                                Short Expiry Items
+                                <HistoryOutlined style={{ color: '#8c8c8c' }} />
+                                Short Expiry Archive
                             </Space>
                         </Title>
                         <Text type="secondary">
-                            for Outpatient Pharmacy Counter.
+                            View past short expiry records.
                         </Text>
                     </div>
                     <Space wrap>
-                        <Button type="primary" onClick={() => navigate('/shortexp-entry')}>
-                            Record Entry
-                        </Button>
+                        <Select
+                            style={{ width: 200 }}
+                            value={selectedDate}
+                            onChange={setSelectedDate}
+                            placeholder="Select Date"
+                            loading={loading && archiveDates.length === 0}
+                        >
+                            {archiveDates.map(date => (
+                                <Option key={date} value={date}>{dayjs(date).format('DD MMM YYYY')}</Option>
+                            ))}
+                        </Select>
                         <Button
                             icon={<FileExcelOutlined />}
                             onClick={exportToExcel}
+                            disabled={drugs.length === 0}
                             style={{ backgroundColor: '#217346', borderColor: '#217346', color: '#fff' }}
                         >
                             Export Excel
                         </Button>
-                        {user?.role === 'Issuer' && (
-                            <Popconfirm
-                                title="Archive & Clear"
-                                description="Are you sure you want to archive and clear all short expiry records? This action cannot be undone."
-                                onConfirm={handleArchiveAndClear}
-                                okText="Yes, Archive & Clear"
-                                cancelText="No"
-                                okButtonProps={{ danger: true }}
-                            >
-                                <Button
-                                    icon={<InboxOutlined />}
-                                    danger
-                                >
-                                    Archive & Clear
-                                </Button>
-                            </Popconfirm>
-                        )}
                     </Space>
                 </div>
 
@@ -413,7 +379,7 @@ const ShortExpPage = () => {
                 <Card bodyStyle={{ padding: isDesktop ? 0 : 16 }}>
                     {isDesktop ? (
                         <Table
-                            loading={loading && drugs.length > 0}
+                            loading={loading && archiveDates.length > 0}
                             columns={columns}
                             dataSource={drugs}
                             rowKey="id"
@@ -427,12 +393,6 @@ const ShortExpPage = () => {
                                 showTotal: (total) => `Total ${total} items`,
                                 pageSizeOptions: ['25', '50', '100', '200'],
                             }}
-                            onRow={(record) => ({
-                                onClick: () => {
-                                    openEditModal(record);
-                                },
-                            })}
-                            rowClassName={() => 'clickable-row'}
                         />
                     ) : (
                         <List
@@ -451,24 +411,8 @@ const ShortExpPage = () => {
                     )}
                 </Card>
             </Space>
-
-            <style>{`
-                .clickable-row {
-                    cursor: pointer;
-                }
-                .clickable-row:hover td {
-                    background-color: #f5f5f5 !important;
-                }
-            `}</style>
-
-            <ShortExpModal
-                isOpen={isEditModalVisible}
-                onClose={handleEditModalClose}
-                selectedItem={editingItem}
-            />
         </div>
     );
 };
 
-export default ShortExpPage;
-
+export default ShortExpArchive;

@@ -142,6 +142,11 @@ const MainLayout = () => {
             icon: <WarningOutlined />,
             label: 'Short Expiry',
         },
+        {
+            key: '/shortexp-archive',
+            icon: <HistoryOutlined />,
+            label: 'Short Exp Archive',
+        },
 
     ];
 
