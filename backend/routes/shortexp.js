@@ -4,21 +4,99 @@ import { authenticateToken } from './auth.js';
 
 const router = express.Router();
 
-// Get all short exp items
+// Get all short exp items from kewps6_records directly
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const indentItemsResult = await pool.query(`
-            SELECT i.*, row_to_json(inv.*) as inventory_items 
-            FROM indent_items i
-            LEFT JOIN inventory_items inv ON i.item_id = inv.id
-            WHERE i.batch_no_1 IS NOT NULL OR i.batch_no_2 IS NOT NULL
+        const result = await pool.query(`
+            SELECT k.*, row_to_json(inv.*) as inventory_items 
+            FROM kewps6_records k
+            LEFT JOIN inventory_items inv ON k.item_id = inv.id
+            ORDER BY k.exp_date ASC
         `);
-        
-        const kewps6Result = await pool.query('SELECT id, item_id, batch_no, se_remarks FROM kewps6_records');
-        
-        res.json({ indentData: indentItemsResult.rows, kewps6Data: kewps6Result.rows });
+        res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Get batches for a specific item
+router.get('/item/:itemId', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM kewps6_records WHERE item_id = $1 ORDER BY exp_date ASC', 
+            [req.params.itemId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Sync batches for a specific item
+router.post('/item/:itemId/batches', authenticateToken, async (req, res) => {
+    const { itemId } = req.params;
+    const { batches } = req.body;
+    
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // Delete existing batches not in the new list
+        const existingResult = await client.query('SELECT id FROM kewps6_records WHERE item_id = $1', [itemId]);
+        const existingIds = existingResult.rows.map(r => r.id);
+        
+        const incomingIds = batches.filter(b => b.id).map(b => b.id);
+        const idsToDelete = existingIds.filter(id => !incomingIds.includes(id));
+        
+        if (idsToDelete.length > 0) {
+            await client.query('DELETE FROM kewps6_records WHERE id = ANY($1)', [idsToDelete]);
+        }
+        
+        // Upsert new/existing batches
+        for (const b of batches) {
+            if (!b.batch_no || !b.exp_date) continue;
+            
+            const today = new Date();
+            const exp = new Date(b.exp_date);
+            let m = (exp.getFullYear() - today.getFullYear()) * 12 + (exp.getMonth() - today.getMonth());
+            if (m < 1) m = 1;
+            const targetColumn = m <= 6 ? `qty_${m}m` : null;
+            
+            if (b.id) {
+                // Update
+                let updateQuery = `UPDATE kewps6_records SET batch_no = $1, exp_date = $2, qty = $3, se_remarks = $4`;
+                let params = [b.batch_no, b.exp_date, b.qty || null, b.se_remarks || ''];
+                if (targetColumn) {
+                    updateQuery += `, ${targetColumn} = $5 WHERE id = $6`;
+                    params.push(b.qty || null, b.id);
+                } else {
+                    updateQuery += ` WHERE id = $5`;
+                    params.push(b.id);
+                }
+                await client.query(updateQuery, params);
+            } else {
+                // Insert
+                if (targetColumn) {
+                    await client.query(
+                        `INSERT INTO kewps6_records (item_id, batch_no, exp_date, qty, se_remarks, ${targetColumn}) VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [itemId, b.batch_no, b.exp_date, b.qty || null, b.se_remarks || '', b.qty || null]
+                    );
+                } else {
+                    await client.query(
+                        `INSERT INTO kewps6_records (item_id, batch_no, exp_date, qty, se_remarks) VALUES ($1, $2, $3, $4, $5)`,
+                        [itemId, b.batch_no, b.exp_date, b.qty || null, b.se_remarks || '']
+                    );
+                }
+            }
+        }
+        
+        await client.query('COMMIT');
+        res.json({ success: true });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
     }
 });
 

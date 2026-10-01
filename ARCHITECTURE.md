@@ -1,8 +1,8 @@
-﻿# ARISE â€” Architecture Documentation
+﻿# ARISE — Architecture Documentation
 `AGILE RESTOCK INVENTORY SURVEILLANCE ENGINE`
 
 > **ARISE** (Automated Requisition & Inventory System for Emergency Pharmacy)
-> Emergency Pharmacy Hospital Segamat â€” Pharmacy Inventory Management System
+> Emergency Pharmacy Hospital Segamat — Pharmacy Inventory Management System
 
 ---
 
@@ -81,22 +81,22 @@ graph TD
 | Date Handling | Day.js | 1.11 |
 | PDF Export | jsPDF + jspdf-autotable | 3.x / 5.x |
 | Excel Export | xlsx (SheetJS) | 0.18 |
-| Backend Runtime | Node.js (ESM) | â€” |
+| Backend Runtime | Node.js (ESM) | — |
 | Backend Framework | Express | 4.x |
-| Authentication | JWT (jsonwebtoken) + bcrypt | â€” |
+| Authentication | JWT (jsonwebtoken) + bcrypt | — |
 | Database Driver | node-postgres (pg) | 8.x |
 | File Upload | Multer | 1.x |
 | Email | Nodemailer | 8.x |
 | Browser Automation | Playwright (Chromium) | 1.61 |
-| Database | PostgreSQL | â€” |
-| Process Manager | PM2 | â€” |
-| Dev Tooling | nodemon, concurrently | â€” |
+| Database | PostgreSQL | — |
+| Process Manager | PM2 | — |
+| Dev Tooling | nodemon, concurrently | — |
 
 ---
 
 ## 2. Process Workflow
 
-### 2.1 â€” Authentication Flow
+### 2.1 — Authentication Flow
 
 ```mermaid
 sequenceDiagram
@@ -122,7 +122,7 @@ sequenceDiagram
     Note over FE,BE: Subsequent requests attach Bearer token
 ```
 
-### 2.2 â€” Routine Indent Workflow
+### 2.2 — Routine Indent Workflow
 
 ```mermaid
 flowchart TD
@@ -148,7 +148,7 @@ flowchart TD
     Q -- Error --> S[Skipped items reported in log stream]
 ```
 
-### 2.3 â€” Ad-Hoc Indent Workflow
+### 2.3 — Ad-Hoc Indent Workflow
 
 ```mermaid
 flowchart TD
@@ -166,7 +166,7 @@ flowchart TD
     H --> J
 ```
 
-### 2.4 â€” Short Expiry Tracking Workflow
+### 2.4 — Short Expiry Tracking Workflow
 
 ```mermaid
 flowchart TD
@@ -182,7 +182,7 @@ flowchart TD
     J --> K["POST /api/shortexp/remark upsert kewps6_records"]
 ```
 
-### 2.5 â€” PhIS Automation Process
+### 2.5 — PhIS Automation Process
 
 ```mermaid
 sequenceDiagram
@@ -278,7 +278,7 @@ graph TD
 
     subgraph PGDB["PostgreSQL Database"]
         PG_DB["PostgreSQL
-schema.sql â€” 6 tables + triggers"]
+schema.sql — 6 tables + triggers"]
     end
 
     MAIN --> APP
@@ -297,7 +297,7 @@ schema.sql â€” 6 tables + triggers"]
 
 ## 4. Business Hierarchy
 
-### 4.1 â€” User Role Hierarchy
+### 4.1 — User Role Hierarchy
 
 ```mermaid
 graph TD
@@ -321,7 +321,7 @@ graph TD
     INDENTER --> D5["Manage Own Profile<br/>name, PHIS credentials"]
 ```
 
-### 4.2 â€” Data Entity Relationship Diagram
+### 4.2 — Data Entity Relationship Diagram
 
 ```mermaid
 erDiagram
@@ -426,7 +426,7 @@ erDiagram
 
 ## 5. List of Modules and Their Functions
 
-### 5.1 â€” Frontend Modules
+### 5.1 — Frontend Modules
 
 #### `src/main.jsx`
 Entry point. Bootstraps the React app inside `<HashRouter>`.
@@ -434,7 +434,7 @@ Entry point. Bootstraps the React app inside `<HashRouter>`.
 #### `src/App.jsx`
 - Defines all application routes via `<Routes>`.
 - Wraps app in `<AuthProvider>` and Ant Design `<ConfigProvider>`.
-- Implements `<ProtectedRoute>` â€” redirects unauthenticated users to `/login` and enforces Issuer-only routes via `requireIssuer` prop.
+- Implements `<ProtectedRoute>` — redirects unauthenticated users to `/login` and enforces Issuer-only routes via `requireIssuer` prop.
 
 #### `src/contexts/AuthContext.jsx`
 Global authentication state manager (React Context).
@@ -497,7 +497,7 @@ Lightweight custom date input wrapping the native HTML date input for form use.
 
 ---
 
-### 5.2 â€” Backend Modules
+### 5.2 — Backend Modules
 
 #### `backend/server.js`
 Express application entry point.
@@ -513,7 +513,7 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 
 ---
 
-#### `backend/routes/auth.js` â€” `/api/auth`
+#### `backend/routes/auth.js` — `/api/auth`
 
 | Endpoint | Method | Auth | Function |
 |----------|--------|------|----------|
@@ -526,11 +526,11 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 | `/users` | GET | JWT | List all users for Admin panel |
 | `/users/:id` | PUT | JWT | Admin: update any user's fields |
 | `/users/:id` | DELETE | JWT | Admin: delete user by ID |
-| `authenticateToken` | Middleware | â€” | Exported JWT verification middleware used across all routes |
+| `authenticateToken` | Middleware | — | Exported JWT verification middleware used across all routes |
 
 ---
 
-#### `backend/routes/inventory.js` â€” `/api/inventory`
+#### `backend/routes/inventory.js` — `/api/inventory`
 
 | Endpoint | Method | Auth | Function |
 |----------|--------|------|----------|
@@ -543,7 +543,7 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 
 ---
 
-#### `backend/routes/indents.js` â€” `/api/indents`
+#### `backend/routes/indents.js` — `/api/indents`
 
 | Endpoint | Method | Auth | Function |
 |----------|--------|------|----------|
@@ -561,7 +561,7 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 
 ---
 
-#### `backend/routes/indent_sessions.js` â€” `/api/indent_sessions`
+#### `backend/routes/indent_sessions.js` — `/api/indent_sessions`
 
 | Endpoint | Method | Auth | Function |
 |----------|--------|------|----------|
@@ -573,7 +573,7 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 
 ---
 
-#### `backend/routes/indent_items.js` â€” `/api/indent_items`
+#### `backend/routes/indent_items.js` — `/api/indent_items`
 
 | Endpoint | Method | Auth | Function |
 |----------|--------|------|----------|
@@ -586,7 +586,7 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 
 ---
 
-#### `backend/routes/shortexp.js` â€” `/api/shortexp`
+#### `backend/routes/shortexp.js` — `/api/shortexp`
 
 | Endpoint | Method | Auth | Function |
 |----------|--------|------|----------|
@@ -595,7 +595,7 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 
 ---
 
-#### `backend/routes/kewps6.js` â€” `/api/kewps6`
+#### `backend/routes/kewps6.js` — `/api/kewps6`
 
 | Endpoint | Method | Auth | Function |
 |----------|--------|------|----------|
@@ -604,9 +604,9 @@ Exports a `pg.Pool` instance for PostgreSQL connections using `DATABASE_URL` fro
 
 ---
 
-### 5.3 â€” Utility Modules
+### 5.3 — Utility Modules
 
-#### `backend/utils/phis_indent.js` â€” `runPhisIndent(items, options)`
+#### `backend/utils/phis_indent.js` — `runPhisIndent(items, options)`
 
 Playwright Chromium automation engine that performs the full indent lifecycle in the PhIS hospital system:
 
@@ -617,22 +617,22 @@ Playwright Chromium automation engine that performs the full indent lifecycle in
 5. Creates a new indent directed to `OUTPATIENT PHARMACY SUBSTORE`.
 6. For each drug item: searches by `item_code`, double-clicks result, sets `requested_qty`, saves with Yes confirmation.
 7. Handles edge cases: item not found (skip + log), max qty exceeded (skip + log), back-order warning (acknowledge + continue).
-8. After all items: saves indent, sends for approval, and approves â€” retrieving the final Indent Number and Date.
+8. After all items: saves indent, sends for approval, and approves — retrieving the final Indent Number and Date.
 9. All progress is streamed in real-time via `logCallback` back to the Express chunked response.
 10. Supports graceful abort mid-run via `options.isAborted` flag and `options.browser.close()`.
 
 ---
 
-### 5.4 â€” Database Schema Summary
+### 5.4 — Database Schema Summary
 
 | Table | Status Lifecycle | Purpose |
 |-------|-----------------|---------|
-| `users` | â€” | System users with role (Issuer/Indenter) and stored PhIS credentials |
-| `inventory_items` | â€” | Master drug/item catalogue: balance, max qty, indent source, expiry flags, image |
+| `users` | — | System users with role (Issuer/Indenter) and stored PhIS credentials |
+| `inventory_items` | — | Master drug/item catalogue: balance, max qty, indent source, expiry flags, image |
 | `indent_sessions` | Draft â†’ Submitted â†’ Approved | Groups drug lines into a routine indent batch per user |
-| `indent_items` | â€” | Individual drug lines within a session; also stores short-expiry batch data |
+| `indent_items` | — | Individual drug lines within a session; also stores short-expiry batch data |
 | `indent_requests` | Pending â†’ Approved â†’ Completed | Ad-hoc single-drug requests outside sessions |
-| `kewps6_records` | â€” | Monthly short-expiry quantity tracking (KEWPS6 government form) per drug/batch |
+| `kewps6_records` | — | Monthly short-expiry quantity tracking (KEWPS6 government form) per drug/batch |
 
 All tables have `created_at` and `updated_at` timestamp columns managed by PostgreSQL triggers.
 
@@ -640,6 +640,14 @@ All tables have `created_at` and `updated_at` timestamp columns managed by Postg
 
 **Drug Type Values:** OPD, Eye/Ear/Nose/Inh, DDA, External, Injection, Syrup, Others, UOD, Non-Drug
 
+
+### 5.5 — Backup Script
+**Backup Script Directory:** '/usr/local/bin/arise_backup.sh'
+
+**Backup Files Directory:** '/var/backups/arise'
+
+**Log Files Directory:** '/usr/local/bin/arise_backup.log'
+
 ---
 
-*Generated by Antigravity â€” ARISE Architecture Analysis*
+*Generated by Antigravity — ARISE Architecture Analysis*

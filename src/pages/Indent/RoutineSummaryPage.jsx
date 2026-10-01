@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Table, Button, message, InputNumber, Card, Space, Tag, Modal, Spin, Grid, List, Affix, Progress, Input, Row, Col, DatePicker, Checkbox } from 'antd';
+import { Typography, Table, Button, message, InputNumber, Card, Space, Tag, Modal, Spin, Grid, List, Affix, Progress, Input, Row, Col, DatePicker, Checkbox, Collapse } from 'antd';
 import { SendOutlined, ExclamationCircleOutlined, UnorderedListOutlined, TableOutlined, CheckCircleOutlined, EditOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import dayjs from 'dayjs';
+import ShortExpModal from '../../components/ShortExpModal';
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
 const { confirm } = Modal;
 const { useBreakpoint } = Grid;
 
@@ -26,10 +28,9 @@ const RoutineSummaryPage = () => {
     const [editBalance, setEditBalance] = useState(0);
     const [editQty, setEditQty] = useState(0);
     const [editRemarks, setEditRemarks] = useState('');
-    const [editEnableShortExp, setEditEnableShortExp] = useState(false);
-    const [editShortExp1, setEditShortExp1] = useState({ batch: '', date: null, qty: null });
-    const [editShortExp2, setEditShortExp2] = useState({ batch: '', date: null, qty: null });
     const [editSaving, setEditSaving] = useState(false);
+
+    const [isShortExpModalOpen, setIsShortExpModalOpen] = useState(false);
 
     useEffect(() => {
         setViewMode(isDesktop ? 'table' : 'list');
@@ -98,19 +99,6 @@ const RoutineSummaryPage = () => {
         setEditBalance(record.inventory_items?.balance || 0);
         setEditQty(record.requested_qty || 0);
         setEditRemarks(record.indent_remarks || '');
-
-        const hasShortExp = record.batch_no_1 || record.batch_no_2;
-        setEditEnableShortExp(!!hasShortExp);
-        setEditShortExp1({
-            batch: record.batch_no_1 || '',
-            date: record.exp_date_1 ? dayjs(record.exp_date_1) : null,
-            qty: record.short_qty_1 || null
-        });
-        setEditShortExp2({
-            batch: record.batch_no_2 || '',
-            date: record.exp_date_2 ? dayjs(record.exp_date_2) : null,
-            qty: record.short_qty_2 || null
-        });
     };
 
     const handleSaveEdit = async () => {
@@ -125,25 +113,8 @@ const RoutineSummaryPage = () => {
                 snapshot_balance: editBalance,
             };
 
-            if (editEnableShortExp) {
-                upsertData.batch_no_1 = editShortExp1.batch || null;
-                upsertData.exp_date_1 = editShortExp1.date ? (dayjs.isDayjs(editShortExp1.date) ? editShortExp1.date.format('YYYY-MM-DD') : dayjs(editShortExp1.date).format('YYYY-MM-DD')) : null;
-                upsertData.short_qty_1 = editShortExp1.qty || 0;
-
-                upsertData.batch_no_2 = editShortExp2.batch || null;
-                upsertData.exp_date_2 = editShortExp2.date ? (dayjs.isDayjs(editShortExp2.date) ? editShortExp2.date.format('YYYY-MM-DD') : dayjs(editShortExp2.date).format('YYYY-MM-DD')) : null;
-                upsertData.short_qty_2 = editShortExp2.qty || 0;
-            } else {
-                upsertData.batch_no_1 = null;
-                upsertData.exp_date_1 = null;
-                upsertData.short_qty_1 = 0;
-                upsertData.batch_no_2 = null;
-                upsertData.exp_date_2 = null;
-                upsertData.short_qty_2 = 0;
-            }
-
             if (editingItem.is_mock) {
-                if (upsertData.requested_qty > 0 || editEnableShortExp || editRemarks) {
+                if (upsertData.requested_qty > 0 || editRemarks) {
                     const data = await api.post('/indent_items', upsertData);
                     setIndentItems(prevItems =>
                         prevItems.map(item =>
@@ -446,138 +417,100 @@ const RoutineSummaryPage = () => {
                 destroyOnClose
             >
                 {editingItem && (
-                    <Row gutter={[24, 24]} style={{ marginTop: 16 }}>
-                        <Col xs={24} sm={12}>
-                            <div style={{ marginBottom: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
-                                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-                                    <div style={{ flex: 1 }}>
-                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Max Qty</Text>
-                                        <InputNumber
-                                            size="large"
-                                            min={0}
-                                            value={editMaxQty}
-                                            onChange={(val) => {
-                                                setEditMaxQty(val);
-                                                if (editBalance !== null && val !== null) {
-                                                    setEditQty(Math.max(0, val - editBalance));
-                                                }
-                                            }}
-                                            style={{ width: '100%' }}
-                                            readOnly
-                                        />
-                                    </div>
-
-                                    <div style={{ flex: 1 }}>
-                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Balance</Text>
-                                        <InputNumber
-                                            size="large"
-                                            min={0}
-                                            value={editBalance}
-                                            inputMode="numeric"
-                                            autoFocus
-                                            onChange={(val) => {
-                                                setEditBalance(val);
-                                                const max = editMaxQty || 0;
-                                                if (val !== null) {
-                                                    setEditQty(Math.max(0, max - val));
-                                                }
-                                            }}
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <hr style={{ border: 0, borderTop: '1px dashed #d9d9d9', margin: '16px 0' }} />
-
-                                <div>
-                                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Indent Qty</Text>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+                        <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                                <div style={{ flex: 1 }}>
+                                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Max Qty</Text>
                                     <InputNumber
                                         size="large"
                                         min={0}
-                                        value={editQty}
-                                        onChange={setEditQty}
+                                        value={editMaxQty}
+                                        onChange={(val) => {
+                                            setEditMaxQty(val);
+                                            if (editBalance !== null && val !== null) {
+                                                setEditQty(Math.max(0, val - editBalance));
+                                            }
+                                        }}
+                                        style={{ width: '100%' }}
+                                        readOnly
+                                    />
+                                </div>
+
+                                <div style={{ flex: 1 }}>
+                                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Balance</Text>
+                                    <InputNumber
+                                        size="large"
+                                        min={0}
+                                        value={editBalance}
+                                        inputMode="numeric"
+                                        autoFocus
+                                        onChange={(val) => {
+                                            setEditBalance(val);
+                                            const max = editMaxQty || 0;
+                                            if (val !== null) {
+                                                setEditQty(Math.max(0, max - val));
+                                            }
+                                        }}
                                         style={{ width: '100%' }}
                                     />
                                 </div>
                             </div>
 
+                            <hr style={{ border: 0, borderTop: '1px dashed #d9d9d9', margin: '16px 0' }} />
+
                             <div>
-                                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Remarks (for Issuer)</Text>
-                                <Input.TextArea
-                                    rows={3}
-                                    placeholder="Enter any specific notes..."
-                                    value={editRemarks}
-                                    onChange={(e) => setEditRemarks(e.target.value)}
+                                <Text strong style={{ display: 'block', marginBottom: 8 }}>Indent Qty</Text>
+                                <InputNumber
+                                    size="large"
+                                    min={0}
+                                    value={editQty}
+                                    onChange={setEditQty}
+                                    style={{ width: '100%' }}
                                 />
                             </div>
-                        </Col>
+                        </div>
 
-                        <Col xs={24} sm={12}>
-                            <Card size="small" style={{ background: '#fafafa' }}>
-                                <Checkbox
-                                    checked={editEnableShortExp}
-                                    onChange={(e) => setEditEnableShortExp(e.target.checked)}
-                                    style={{ marginBottom: 16, fontWeight: 500 }}
-                                >
-                                    Has Short Expiry?
-                                </Checkbox>
+                        <Card size="small" style={{ background: '#fff8f2ff', textAlign: 'center', padding: '8px 0' }}>
+                            <Button
+                                type="dashed"
+                                icon={<EditOutlined />}
+                                onClick={() => setIsShortExpModalOpen(true)}
 
-                                {editEnableShortExp && (
-                                    <div style={{ marginTop: 16 }}>
-                                        <div style={{ marginBottom: 16, padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
-                                            <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 1</Text>
-                                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                                <Input
-                                                    placeholder="Batch No"
-                                                    value={editShortExp1.batch}
-                                                    onChange={e => setEditShortExp1({ ...editShortExp1, batch: e.target.value })}
-                                                />
-                                                <InputNumber
-                                                    placeholder="Qty"
-                                                    min={0}
-                                                    value={editShortExp1.qty}
-                                                    onChange={v => setEditShortExp1({ ...editShortExp1, qty: v })}
-                                                />
-                                            </div>
-                                            <DatePicker
-                                                placeholder="Expiry Date"
-                                                style={{ width: '100%' }}
-                                                value={editShortExp1.date}
-                                                onChange={d => setEditShortExp1({ ...editShortExp1, date: d })}
-                                            />
-                                        </div>
+                            >
+                                Edit Short Expiry Batch
+                            </Button>
+                        </Card>
 
-                                        <div style={{ padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
-                                            <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 2</Text>
-                                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                                <Input
-                                                    placeholder="Batch No"
-                                                    value={editShortExp2.batch}
-                                                    onChange={e => setEditShortExp2({ ...editShortExp2, batch: e.target.value })}
-                                                />
-                                                <InputNumber
-                                                    placeholder="Qty"
-                                                    min={0}
-                                                    value={editShortExp2.qty}
-                                                    onChange={v => setEditShortExp2({ ...editShortExp2, qty: v })}
-                                                />
-                                            </div>
-                                            <DatePicker
-                                                placeholder="Expiry Date"
-                                                style={{ width: '100%' }}
-                                                value={editShortExp2.date}
-                                                onChange={d => setEditShortExp2({ ...editShortExp2, date: d })}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </Card>
-                        </Col>
-                    </Row>
+                        <Collapse
+                            ghost
+                            items={[
+                                {
+                                    key: '1',
+                                    label: <Text type="secondary">Remarks (for Issuer)</Text>,
+                                    children: (
+                                        <TextArea
+                                            rows={2}
+                                            placeholder="Put your remarks here eg: quota increased, new regimens etc"
+                                            value={editRemarks}
+                                            onChange={(e) => setEditRemarks(e.target.value)}
+                                        />
+                                    ),
+                                },
+                            ]}
+                        />
+
+
+                    </div>
                 )}
             </Modal>
+            <ShortExpModal
+                isOpen={isShortExpModalOpen}
+                onClose={() => setIsShortExpModalOpen(false)}
+                selectedItem={editingItem?.inventory_items}
+            />
         </div>
     );
-}
+};
 
 export default RoutineSummaryPage;

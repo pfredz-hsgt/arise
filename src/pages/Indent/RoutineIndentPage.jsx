@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Typography, Card, Button, InputNumber, Input, Row, Col, Spin, message, DatePicker, Checkbox, Steps, Space, Collapse } from 'antd';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { LeftOutlined, RightOutlined, EditOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import dayjs from 'dayjs';
+import ShortExpModal from '../../components/ShortExpModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -23,11 +24,7 @@ const RoutineIndentPage = () => {
     const [currentQty, setCurrentQty] = useState(0);
     const [currentBalance, setCurrentBalance] = useState(null);
     const [currentRemarks, setCurrentRemarks] = useState('');
-    const [enableShortExp, setEnableShortExp] = useState(false);
-
-    // Short Expiry Details
-    const [shortExp1, setShortExp1] = useState({ batch: '', date: null, qty: null });
-    const [shortExp2, setShortExp2] = useState({ batch: '', date: null, qty: null });
+    const [isShortExpModalOpen, setIsShortExpModalOpen] = useState(false);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -121,29 +118,12 @@ const RoutineIndentPage = () => {
             setCurrentMaxQty(maxQty);
             setCurrentBalance(balance);
             setCurrentQty(data.requested_qty || defaultQty);
-
-            const hasShortExp = data.batch_no_1 || data.batch_no_2;
-            setEnableShortExp(!!hasShortExp);
-
-            setShortExp1({
-                batch: data.batch_no_1 || '',
-                date: data.exp_date_1 ? dayjs(data.exp_date_1) : null,
-                qty: data.short_qty_1 || null
-            });
-            setShortExp2({
-                batch: data.batch_no_2 || '',
-                date: data.exp_date_2 ? dayjs(data.exp_date_2) : null,
-                qty: data.short_qty_2 || null
-            });
         } else {
             // Reset to defaults
             setCurrentMaxQty(maxQty);
             setCurrentQty(defaultQty);
             setCurrentBalance(balance);
             setCurrentRemarks('');
-            setEnableShortExp(false);
-            setShortExp1({ batch: '', date: null, qty: null });
-            setShortExp2({ batch: '', date: null, qty: null });
         }
     };
 
@@ -163,24 +143,6 @@ const RoutineIndentPage = () => {
                 snapshot_max_qty: currentMaxQty,
                 snapshot_balance: currentBalance,
             };
-
-            if (enableShortExp) {
-                upsertData.batch_no_1 = shortExp1.batch || null;
-                upsertData.exp_date_1 = shortExp1.date ? shortExp1.date.format('YYYY-MM-DD') : null;
-                upsertData.short_qty_1 = shortExp1.qty || 0;
-
-                upsertData.batch_no_2 = shortExp2.batch || null;
-                upsertData.exp_date_2 = shortExp2.date ? shortExp2.date.format('YYYY-MM-DD') : null;
-                upsertData.short_qty_2 = shortExp2.qty || 0;
-            } else {
-                // Clear short exp data if unchecked
-                upsertData.batch_no_1 = null;
-                upsertData.exp_date_1 = null;
-                upsertData.short_qty_1 = 0;
-                upsertData.batch_no_2 = null;
-                upsertData.exp_date_2 = null;
-                upsertData.short_qty_2 = 0;
-            }
 
             // check if row already exists
             const existing = await api.get(`/indent_items?session_id=${sessionId}&item_id=${currentItem.id}`);
@@ -300,159 +262,96 @@ const RoutineIndentPage = () => {
                     }
                     bodyStyle={{ padding: 24 }}
                 >
-                    <Row gutter={[24, 24]}>
-                        <Col xs={24} sm={12}>
-                            <div style={{ marginBottom: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
-                                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-                                    <div style={{ flex: 1 }}>
-                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Max Qty</Text>
-                                        <InputNumber
-                                            size="large"
-                                            min={0}
-                                            value={currentMaxQty}
-                                            inputMode="numeric"
-                                            onChange={(val) => {
-                                                setCurrentMaxQty(val);
-                                                if (currentBalance !== null && val !== null) {
-                                                    setCurrentQty(Math.max(0, val - currentBalance));
-                                                }
-                                            }}
-                                            style={{ width: '100%' }}
-                                            readOnly
-                                            disabled={loadingItem}
-                                        />
-                                    </div>
-
-                                    <div style={{ flex: 1 }}>
-                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Balance</Text>
-                                        <InputNumber
-                                            ref={balanceInputRef}
-                                            size="large"
-                                            min={0}
-                                            placeholder="Balance"
-                                            value={currentBalance}
-                                            inputMode="numeric"
-                                            onChange={(val) => {
-                                                setCurrentBalance(val);
-                                                const max = currentMaxQty || 0;
-                                                if (val !== null) {
-                                                    const calcQty = Math.max(0, max - val);
-                                                    setCurrentQty(calcQty);
-                                                }
-                                            }}
-                                            style={{ width: '100%' }}
-                                            disabled={loadingItem}
-                                        />
-                                    </div>
-                                </div>
-
-                                <hr style={{ border: 0, borderTop: '1px dashed #d9d9d9', margin: '16px 0' }} />
-
-                                <div style={{}}>
-                                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Indent Qty</Text>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ marginBottom: 0, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                                <div style={{ flex: 1 }}>
+                                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Max Qty</Text>
                                     <InputNumber
                                         size="large"
                                         min={0}
-                                        value={currentQty}
+                                        value={currentMaxQty}
                                         inputMode="numeric"
-                                        onChange={setCurrentQty}
+                                        onChange={(val) => {
+                                            setCurrentMaxQty(val);
+                                            if (currentBalance !== null && val !== null) {
+                                                setCurrentQty(Math.max(0, val - currentBalance));
+                                            }
+                                        }}
+                                        style={{ width: '100%' }}
+                                        readOnly
+                                        disabled={loadingItem}
+                                    />
+                                </div>
+
+                                <div style={{ flex: 1 }}>
+                                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Balance</Text>
+                                    <InputNumber
+                                        ref={balanceInputRef}
+                                        size="large"
+                                        min={0}
+                                        placeholder="Balance"
+                                        value={currentBalance}
+                                        inputMode="numeric"
+                                        onChange={(val) => {
+                                            setCurrentBalance(val);
+                                            const max = currentMaxQty || 0;
+                                            if (val !== null) {
+                                                const calcQty = Math.max(0, max - val);
+                                                setCurrentQty(calcQty);
+                                            }
+                                        }}
                                         style={{ width: '100%' }}
                                         disabled={loadingItem}
                                     />
                                 </div>
                             </div>
 
-                            <Collapse
-                                ghost
-                                items={[
-                                    {
-                                        key: '1',
-                                        label: <Text type="secondary">Remarks (for Issuer)</Text>,
-                                        children: (
-                                            <TextArea
-                                                rows={3}
-                                                placeholder="Enter any specific notes..."
-                                                value={currentRemarks}
-                                                onChange={(e) => setCurrentRemarks(e.target.value)}
-                                                disabled={loadingItem}
-                                            />
-                                        ),
-                                    },
-                                ]}
-                            />
-                        </Col>
+                            <hr style={{ border: 0, borderTop: '1px dashed #d9d9d9', margin: '16px 0' }} />
 
-                        <Col xs={24} sm={12}>
-                            <Card size="small" style={{ background: '#fafafa' }}>
-                                <Checkbox
-                                    checked={enableShortExp}
-                                    onChange={(e) => setEnableShortExp(e.target.checked)}
-                                    style={{ marginBottom: 16, fontWeight: 500 }}
+                            <div style={{}}>
+                                <Text strong style={{ display: 'block', marginBottom: 8 }}>Indent Qty</Text>
+                                <InputNumber
+                                    size="large"
+                                    min={0}
+                                    value={currentQty}
+                                    inputMode="numeric"
+                                    onChange={setCurrentQty}
+                                    style={{ width: '100%' }}
                                     disabled={loadingItem}
-                                >
-                                    Short Expiry Items?
-                                </Checkbox>
+                                />
+                            </div>
+                        </div>
+                        <Card size="small" style={{ background: '#fff8f2ff', textAlign: 'center', padding: '8px 0' }}>
+                            <Button
+                                type="dashed"
+                                icon={<EditOutlined />}
+                                onClick={() => setIsShortExpModalOpen(true)}
+                                disabled={loadingItem}
+                            >
+                                Edit Short Expiry Batch
+                            </Button>
+                        </Card>
+                        <Collapse
+                            ghost
+                            items={[
+                                {
+                                    key: '1',
+                                    label: <Text type="secondary">Remarks (for Issuer)</Text>,
+                                    children: (
+                                        <TextArea
+                                            rows={2}
+                                            placeholder="Put your remarks here eg: quota increased, new regimens etc"
+                                            value={currentRemarks}
+                                            onChange={(e) => setCurrentRemarks(e.target.value)}
+                                            disabled={loadingItem}
+                                        />
+                                    ),
+                                },
+                            ]}
+                        />
 
-                                {enableShortExp && (
-                                    <div style={{ marginTop: 16 }}>
-                                        <div style={{ marginBottom: 16, padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
-                                            <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 1</Text>
-                                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                                <Input
-                                                    placeholder="Batch No"
-                                                    value={shortExp1.batch}
-                                                    onChange={e => setShortExp1({ ...shortExp1, batch: e.target.value })}
-                                                    disabled={loadingItem}
-                                                />
-                                                <InputNumber
-                                                    placeholder="Qty"
-                                                    min={0}
-                                                    value={shortExp1.qty}
-                                                    inputMode="numeric"
-                                                    onChange={v => setShortExp1({ ...shortExp1, qty: v })}
-                                                    disabled={loadingItem}
-                                                />
-                                            </div>
-                                            <DatePicker
-                                                placeholder="Expiry Date"
-                                                style={{ width: '100%' }}
-                                                value={shortExp1.date}
-                                                onChange={d => setShortExp1({ ...shortExp1, date: d })}
-                                                disabled={loadingItem}
-                                            />
-                                        </div>
-
-                                        <div style={{ padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 4 }}>
-                                            <Text strong style={{ display: 'block', marginBottom: 8 }}>Batch 2</Text>
-                                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                                <Input
-                                                    placeholder="Batch No"
-                                                    value={shortExp2.batch}
-                                                    onChange={e => setShortExp2({ ...shortExp2, batch: e.target.value })}
-                                                    disabled={loadingItem}
-                                                />
-                                                <InputNumber
-                                                    placeholder="Qty"
-                                                    min={0}
-                                                    value={shortExp2.qty}
-                                                    inputMode="numeric"
-                                                    onChange={v => setShortExp2({ ...shortExp2, qty: v })}
-                                                    disabled={loadingItem}
-                                                />
-                                            </div>
-                                            <DatePicker
-                                                placeholder="Expiry Date"
-                                                style={{ width: '100%' }}
-                                                value={shortExp2.date}
-                                                onChange={d => setShortExp2({ ...shortExp2, date: d })}
-                                                disabled={loadingItem}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </Card>
-                        </Col>
-                    </Row>
+                    </div>
                 </Card>
             </Spin>
 
@@ -476,6 +375,12 @@ const RoutineIndentPage = () => {
                     {currentIndex === items.length - 1 ? 'Finish' : 'Next'} <RightOutlined />
                 </Button>
             </div>
+
+            <ShortExpModal
+                isOpen={isShortExpModalOpen}
+                onClose={() => setIsShortExpModalOpen(false)}
+                selectedItem={currentItem}
+            />
         </div>
     );
 };

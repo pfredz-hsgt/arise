@@ -29,6 +29,7 @@ import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
 import { getSourceColor } from '../../lib/colorMappings';
 import { useNavigate } from 'react-router-dom';
+import ShortExpModal from '../../components/ShortExpModal';
 
 const { Title, Text } = Typography;
 
@@ -39,8 +40,7 @@ const ShortExpPage = () => {
     const saveTimeouts = useRef({});
 
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-    const [editingRecord, setEditingRecord] = useState(null);
-    const [form] = Form.useForm();
+    const [editingItem, setEditingItem] = useState(null);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
@@ -61,58 +61,24 @@ const ShortExpPage = () => {
             setLoading(true);
 
             // Fetch from custom API
-            const { indentData, kewps6Data } = await api.get('/shortexp');
+            const data = await api.get('/shortexp');
 
-            // Map remarks by item_id + batch_no
-            const remarksMap = {};
-            kewps6Data?.forEach(record => {
-                const key = `${record.item_id}_${record.batch_no}`;
-                remarksMap[key] = record.se_remarks;
-            });
-
-            // 3. Normalize into single rows per batch
-            const rows = [];
-
-            indentData?.forEach(item => {
-                const invItem = item.inventory_items || {};
-
-                if (item.batch_no_1 && item.exp_date_1) {
-                    const key = `${item.item_id}_${item.batch_no_1}`;
-                    rows.push({
-                        id: `${item.id}_b1`,
-                        original_id: item.id,
-                        item_id: item.item_id,
-                        name: invItem.name,
-                        puchase_type: invItem.puchase_type,
-                        std_kt: invItem.std_kt,
-                        pku: invItem.pku,
-                        indent_source: invItem.indent_source,
-                        rak: invItem.row,
-                        batch_no: item.batch_no_1,
-                        exp_date: item.exp_date_1,
-                        qty: item.short_qty_1 || 0,
-                        se_remarks: remarksMap[key] || '',
-                    });
-                }
-
-                if (item.batch_no_2 && item.exp_date_2) {
-                    const key = `${item.item_id}_${item.batch_no_2}`;
-                    rows.push({
-                        id: `${item.id}_b2`,
-                        original_id: item.id,
-                        item_id: item.item_id,
-                        name: invItem.name,
-                        puchase_type: invItem.puchase_type,
-                        std_kt: invItem.std_kt,
-                        pku: invItem.pku,
-                        indent_source: invItem.indent_source,
-                        rak: invItem.row,
-                        batch_no: item.batch_no_2,
-                        exp_date: item.exp_date_2,
-                        qty: item.short_qty_2 || 0,
-                        se_remarks: remarksMap[key] || '',
-                    });
-                }
+            const rows = data.map(record => {
+                const invItem = record.inventory_items || {};
+                return {
+                    id: record.id,
+                    item_id: record.item_id,
+                    name: invItem.name,
+                    puchase_type: invItem.puchase_type,
+                    std_kt: invItem.std_kt,
+                    pku: invItem.pku,
+                    indent_source: invItem.indent_source,
+                    rak: invItem.row,
+                    batch_no: record.batch_no,
+                    exp_date: record.exp_date,
+                    qty: record.qty || 0,
+                    se_remarks: record.se_remarks || '',
+                };
             });
 
             // Sort by exp_date
@@ -158,81 +124,22 @@ const ShortExpPage = () => {
     };
 
     const openEditModal = (record) => {
-        setEditingRecord(record);
-        form.setFieldsValue({
-            batch_no: record.batch_no,
-            exp_date: record.exp_date ? dayjs(record.exp_date) : null,
-            qty: record.qty,
-            se_remarks: record.se_remarks
+        setEditingItem({
+            id: record.item_id,
+            name: record.name,
+            pku: record.pku,
+            puchase_type: record.puchase_type,
+            std_kt: record.std_kt,
+            row: record.rak,
+            indent_source: record.indent_source
         });
         setIsEditModalVisible(true);
     };
 
-    const handleEditModalCancel = () => {
+    const handleEditModalClose = () => {
         setIsEditModalVisible(false);
-        setEditingRecord(null);
-        form.resetFields();
-    };
-
-    const handleEditSubmit = async (values) => {
-        try {
-            const isB1 = editingRecord.id.endsWith('_b1');
-            const expDateStr = values.exp_date ? values.exp_date.format('YYYY-MM-DD') : null;
-
-            // Update indent_items for batch_no, exp_date, short_qty
-            const indentUpdate = isB1 ? {
-                batch_no_1: values.batch_no,
-                exp_date_1: expDateStr,
-                short_qty_1: values.qty
-            } : {
-                batch_no_2: values.batch_no,
-                exp_date_2: expDateStr,
-                short_qty_2: values.qty
-            };
-
-            await api.put(`/indent_items/${editingRecord.original_id}`, indentUpdate);
-
-            // Update kewps6_records for se_remarks
-            if (values.se_remarks !== undefined) {
-                await saveToDatabase({
-                    item_id: editingRecord.item_id,
-                    batch_no: values.batch_no,
-                    exp_date: expDateStr,
-                    qty: values.qty
-                }, values.se_remarks);
-            }
-
-            message.success('Record updated successfully');
-            setIsEditModalVisible(false);
-            setEditingRecord(null);
-            fetchShortExpDrugs();
-        } catch (error) {
-            console.error('Error updating record:', error);
-            message.error('Failed to update record');
-        }
-    };
-
-    const handleDelete = async (record) => {
-        try {
-            const isB1 = record.id.endsWith('_b1');
-            const indentUpdate = isB1 ? {
-                batch_no_1: null,
-                exp_date_1: null,
-                short_qty_1: null
-            } : {
-                batch_no_2: null,
-                exp_date_2: null,
-                short_qty_2: null
-            };
-
-            await api.put(`/indent_items/${record.original_id}`, indentUpdate);
-
-            message.success('Record deleted successfully');
-            fetchShortExpDrugs();
-        } catch (error) {
-            console.error('Error deleting record:', error);
-            message.error('Failed to delete record');
-        }
+        setEditingItem(null);
+        fetchShortExpDrugs();
     };
 
     const getQtyForColumn = (record, targetMonth) => {
@@ -485,62 +392,11 @@ const ShortExpPage = () => {
                 }
             `}</style>
 
-            <Modal
-                title={
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight: 24 }}>
-                        <span>Edit Short Expiry Record</span>
-                        <Popconfirm
-                            title="Delete batch record?"
-                            description="This will clear the batch info."
-                            onConfirm={() => {
-                                handleDelete(editingRecord);
-                                setIsEditModalVisible(false);
-                            }}
-                            okText="Yes"
-                            cancelText="No"
-                            placement="bottomRight"
-                        >
-                            <Button type="text" danger icon={<DeleteOutlined />} onClick={e => e.stopPropagation()} />
-                        </Popconfirm>
-                    </div>
-                }
-                open={isEditModalVisible}
-                onOk={() => form.submit()}
-                onCancel={handleEditModalCancel}
-                destroyOnClose
-                closable={false}
-            >
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={handleEditSubmit}
-                >
-                    <Form.Item label="Drug Name">
-                        <Input
-                            value={editingRecord?.name}
-                            addonAfter={editingRecord?.pku ? `${editingRecord.pku}` : null}
-                        />
-                    </Form.Item>
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item label="Batch No" name="batch_no" rules={[{ required: true, message: 'Please enter Batch No' }]}>
-                                <Input />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item label="Expiry Date" name="exp_date" rules={[{ required: true, message: 'Please select Expiry Date' }]}>
-                                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-                    <Form.Item label="Quantity (Short Expiry)" name="qty">
-                        <InputNumber min={0} style={{ width: '100%' }} inputMode="numeric" />
-                    </Form.Item>
-                    <Form.Item label="Remarks" name="se_remarks">
-                        <Input.TextArea rows={2} />
-                    </Form.Item>
-                </Form>
-            </Modal>
+            <ShortExpModal
+                isOpen={isEditModalVisible}
+                onClose={handleEditModalClose}
+                selectedItem={editingItem}
+            />
         </div>
     );
 };

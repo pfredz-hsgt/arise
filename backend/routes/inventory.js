@@ -75,7 +75,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create a new item (Admin)
 router.post('/', authenticateToken, upload.single('image'), async (req, res) => {
     // Ideally check req.user.role === 'Issuer' here
-    const { name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type, is_short_exp, short_exp } = req.body;
+    const { name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type } = req.body;
     let image_url = req.body.image_url || null;
 
     if (req.file) {
@@ -86,9 +86,9 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
         const result = await pool.query(
             `INSERT INTO inventory_items (
                 name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, 
-                indent_source, remarks, type, is_short_exp, short_exp, image_url
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
-            [name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type, is_short_exp, short_exp || null, image_url]
+                indent_source, remarks, type, image_url
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+            [name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type, image_url]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -98,7 +98,7 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
 
 // Update an item (Admin)
 router.put('/:id', authenticateToken, upload.single('image'), async (req, res) => {
-    const { name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type, is_short_exp, short_exp } = req.body;
+    const { name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type } = req.body;
     let image_url = req.body.image_url;
 
     if (req.file) {
@@ -123,14 +123,12 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
                 indent_source = COALESCE($9, indent_source),
                 remarks = COALESCE($10, remarks),
                 type = COALESCE($11, type),
-                is_short_exp = COALESCE($12, is_short_exp),
-                short_exp = COALESCE($13, short_exp),
-                image_url = COALESCE($14, image_url)
-            WHERE id = $15 RETURNING *
+                image_url = COALESCE($12, image_url)
+            WHERE id = $13 RETURNING *
         `;
         const result = await pool.query(updateQuery, [
             name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, 
-            indent_source, remarks, type, is_short_exp, short_exp || null, image_url, req.params.id
+            indent_source, remarks, type, image_url, req.params.id
         ]);
         
         if (result.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
@@ -138,7 +136,7 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
 
         // Audit Log Generation
         const changes = {};
-        const fieldsToCheck = ['name', 'item_code', 'pku', 'puchase_type', 'std_kt', 'row', 'max_qty', 'balance', 'indent_source', 'remarks', 'type', 'is_short_exp', 'short_exp'];
+        const fieldsToCheck = ['name', 'item_code', 'pku', 'puchase_type', 'std_kt', 'row', 'max_qty', 'balance', 'indent_source', 'remarks', 'type'];
         let changeMessages = [];
 
         for (const field of fieldsToCheck) {
