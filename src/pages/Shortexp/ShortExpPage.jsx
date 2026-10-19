@@ -30,7 +30,7 @@ import {
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
-import { getSourceColor } from '../../lib/colorMappings';
+import { getSourceColor, getUnitColor } from '../../lib/colorMappings';
 import { useNavigate } from 'react-router-dom';
 import ShortExpModal from '../../components/ShortExpModal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,7 +41,8 @@ const { useBreakpoint } = Grid;
 const ShortExpPage = () => {
     const screens = useBreakpoint();
     const isDesktop = screens.lg;
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
 
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -62,14 +63,14 @@ const ShortExpPage = () => {
 
     useEffect(() => {
         fetchShortExpDrugs();
-    }, []);
+    }, [unit]);
 
     const fetchShortExpDrugs = async () => {
         try {
             setLoading(true);
 
-            // Fetch from custom API
-            const data = await api.get('/shortexp');
+            // Fetch from custom API for user's main_unit
+            const data = await api.get(`/shortexp?main_unit=${encodeURIComponent(unit)}`);
 
             const rows = data.map(record => {
                 const invItem = record.inventory_items || {};
@@ -297,8 +298,8 @@ const ShortExpPage = () => {
     const handleArchiveAndClear = async () => {
         try {
             setLoading(true);
-            await api.post('/shortexp/archive');
-            message.success('Data archived and cleared successfully!');
+            await api.post('/shortexp/archive', { main_unit: unit });
+            message.success(`${unit} data archived and cleared successfully!`);
             fetchShortExpDrugs();
         } catch (error) {
             console.error('Failed to archive data:', error);
@@ -372,10 +373,11 @@ const ShortExpPage = () => {
                             <Space>
                                 <WarningOutlined style={{ color: '#fa8c16' }} />
                                 Short Expiry Items
+                                <Tag color={getUnitColor(unit)} style={{ marginLeft: 6, fontWeight: 600 }}>{unit}</Tag>
                             </Space>
                         </Title>
                         <Text type="secondary">
-                            for Outpatient Pharmacy Counter.
+                            for {unit} Pharmacy Counter.
                         </Text>
                     </div>
                     <Space wrap>
@@ -391,8 +393,8 @@ const ShortExpPage = () => {
                         </Button>
                         {user?.role === 'Issuer' && (
                             <Popconfirm
-                                title="Archive & Clear"
-                                description="Are you sure you want to archive and clear all short expiry records? This action cannot be undone."
+                                title={`Archive & Clear (${unit})`}
+                                description={`Are you sure you want to archive and clear all ${unit} short expiry records? This action cannot be undone.`}
                                 onConfirm={handleArchiveAndClear}
                                 okText="Yes, Archive & Clear"
                                 cancelText="No"

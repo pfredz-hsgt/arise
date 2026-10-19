@@ -58,7 +58,7 @@ const InventoryTable = () => {
     const fetchDrugs = async () => {
         try {
             setLoading(true);
-            const data = await api.get('/inventory');
+            const data = await api.get('/inventory?all_units=true');
 
             setDrugs(data || []);
         } catch (error) {

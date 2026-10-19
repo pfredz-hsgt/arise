@@ -22,7 +22,8 @@ import {
     TableOutlined,
 } from '@ant-design/icons';
 import { api } from '../../lib/api';
-import { getSourceColor, getPuchaseTypeColor, getStdKtColor } from '../../lib/colorMappings';
+import { getSourceColor, getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
+import { useAuth } from '../../contexts/AuthContext';
 import IndentModal from './IndentModal';
 import DebouncedSearchInput from '../../components/DebouncedSearchInput';
 
@@ -45,6 +46,11 @@ const DrugListItem = React.memo(({ drug, onClick }) => {
                             {drug.name}
                         </Text>
                         <Space wrap size={[4, 4]} style={{ marginBottom: '8px' }}>
+                            {drug.main_unit && (
+                                <Tag color={getUnitColor(drug.main_unit)} style={{ margin: 0, fontSize: '11px', fontWeight: 600 }}>
+                                    {drug.main_unit}
+                                </Tag>
+                            )}
                             {drug.puchase_type && (
                                 <Tag color={getPuchaseTypeColor(drug.puchase_type)} style={{ margin: 0, fontSize: '11px' }}>
                                     {drug.puchase_type}
@@ -99,6 +105,9 @@ DrugListItem.displayName = 'DrugListItem';
 const IndentPage = () => {
     const screens = useBreakpoint();
     const isDesktop = screens.lg;
+    const { user, profile } = useAuth();
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
+
     const [drugs, setDrugs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDrug, setSelectedDrug] = useState(null);
@@ -106,7 +115,7 @@ const IndentPage = () => {
     const [indentRows, setIndentRows] = useState([]);
     const [selectedIndentRow, setSelectedIndentRow] = useState('ALL');
     const [indentSources, setIndentSources] = useState([]);
-    const [selectedIndentSource, setSelectedIndentSource] = useState('OPD Substor');
+    const [selectedIndentSource, setSelectedIndentSource] = useState('ALL');
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
     const [searchQuery, setSearchQuery] = useState('');
@@ -117,22 +126,10 @@ const IndentPage = () => {
         setViewMode(isDesktop ? 'table' : 'list');
     }, [isDesktop]);
 
-
-
-    useEffect(() => {
-        fetchDrugs();
-        setupRealtimeSubscription();
-    }, []);
-
-    // Reset to first page when search query changes or indent source changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchQuery, selectedIndentRow, selectedIndentSource]);
-
     const fetchDrugs = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await api.get('/inventory');
+            const data = await api.get(`/inventory?main_unit=${encodeURIComponent(unit)}`);
 
             setDrugs(data || []);
 
@@ -149,7 +146,17 @@ const IndentPage = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [unit]);
+
+    useEffect(() => {
+        fetchDrugs();
+        setupRealtimeSubscription();
+    }, [fetchDrugs]);
+
+    // Reset to first page when search query changes or indent source changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedIndentRow, selectedIndentSource]);
 
     // Debounced fetch to prevent excessive refetching
     const debouncedFetchDrugs = useCallback(() => {
@@ -246,6 +253,14 @@ const IndentPage = () => {
             align: 'center',
         },
         {
+            title: 'Main Unit',
+            dataIndex: 'main_unit',
+            key: 'main_unit',
+            width: 110,
+            align: 'center',
+            render: (u) => <Tag color={getUnitColor(u || 'OPD')}>{u || 'OPD'}</Tag>,
+        },
+        {
             title: 'Purchase Type',
             dataIndex: 'puchase_type',
             key: 'puchase_type',
@@ -334,8 +349,12 @@ const IndentPage = () => {
                 <Space direction="vertical" size="small" style={{ width: '100%' }}>
                     {/* Header */}
                     <div>
-                        <Title level={3}>Urgent Indent</Title>
-
+                        <Title level={3}>
+                            Urgent Indent
+                            <Tag color={getUnitColor(unit)} style={{ marginLeft: 10, fontSize: 13, padding: '2px 8px', verticalAlign: 'middle' }}>
+                                {unit}
+                            </Tag>
+                        </Title>
                     </div>
 
 

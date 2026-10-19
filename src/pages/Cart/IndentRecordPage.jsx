@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Typography, Card, Spin, message, DatePicker, Select, Form, Space, Input, List, Tag, Button, Row, Col } from 'antd';
 import { FileExcelOutlined, EyeOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
+import { getUnitColor } from '../../lib/colorMappings';
+import { useAuth } from '../../contexts/AuthContext';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import * as XLSX from 'xlsx';
@@ -14,6 +16,8 @@ const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
 const IndentRecordPage = () => {
+    const { user, profile } = useAuth();
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState([]);
@@ -46,13 +50,13 @@ const IndentRecordPage = () => {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [unit]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Fetch users and sessions from custom API
-            const { usersData, sessionsData, requestsData } = await api.get('/indents/records');
+            // Fetch users and sessions from custom API for user's main_unit
+            const { usersData, sessionsData, requestsData } = await api.get(`/indents/records?main_unit=${encodeURIComponent(unit)}`);
             if (usersData) setUsers(usersData);
 
             let processedSessions = (sessionsData || []).map(sess => {
@@ -517,7 +521,10 @@ const IndentRecordPage = () => {
     return (
         <div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Title level={3} style={{ margin: 0 }}>Indent Records</Title>
+                <Title level={3} style={{ margin: 0 }}>
+                    Indent Records
+                    <Tag color={getUnitColor(unit)} style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}>{unit}</Tag>
+                </Title>
                 <Space>
                     <Button
                         icon={<EyeOutlined style={{ fontSize: 19 }} />}

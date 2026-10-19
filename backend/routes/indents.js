@@ -10,13 +10,22 @@ const activePhisProcesses = new Map();
 // Get cart data for Issuer
 router.get('/cart', authenticateToken, async (req, res) => {
     try {
-        const sessionsResult = await pool.query(`
-            SELECT s.*, u.name as profile_name, u.phis_username, u.phis_password
+        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
+        const isAll = req.query.all_units === 'true';
+
+        let sessionQuery = `
+            SELECT s.*, u.name as profile_name, u.phis_username, u.phis_password, u.main_unit as user_main_unit
             FROM indent_sessions s
             LEFT JOIN users u ON s.user_id = u.id
             WHERE s.status = 'Submitted'
-            ORDER BY s.created_at ASC
-        `);
+        `;
+        const sessionParams = [];
+        if (!isAll) {
+            sessionParams.push(unit);
+            sessionQuery += ` AND u.main_unit = $${sessionParams.length}`;
+        }
+        sessionQuery += ` ORDER BY s.created_at ASC`;
+        const sessionsResult = await pool.query(sessionQuery, sessionParams);
         let sessions = sessionsResult.rows;
 
         for (let s of sessions) {
@@ -30,14 +39,21 @@ router.get('/cart', authenticateToken, async (req, res) => {
             s.indent_items = itemsResult.rows;
         }
 
-        const requestsResult = await pool.query(`
-            SELECT ir.*, u.name as profile_name, u.phis_username, u.phis_password, row_to_json(inv.*) as inventory_items
+        let requestsQuery = `
+            SELECT ir.*, u.name as profile_name, u.phis_username, u.phis_password, u.main_unit as user_main_unit, row_to_json(inv.*) as inventory_items
             FROM indent_requests ir
             LEFT JOIN users u ON ir.user_id = u.id
             LEFT JOIN inventory_items inv ON ir.item_id = inv.id
             WHERE ir.status = 'Pending'
-            ORDER BY ir.created_at ASC
-        `);
+        `;
+        const requestParams = [];
+        if (!isAll) {
+            requestParams.push(unit);
+            requestsQuery += ` AND (inv.main_unit = $${requestParams.length} OR (inv.main_unit IS NULL AND u.main_unit = $${requestParams.length}))`;
+        }
+        requestsQuery += ` ORDER BY ir.created_at ASC`;
+
+        const requestsResult = await pool.query(requestsQuery, requestParams);
         const requestsData = requestsResult.rows.map(req => {
             req.profiles = { name: req.profile_name, phis_username: req.phis_username, phis_password: req.phis_password ? decrypt(req.phis_password) : req.phis_password };
             return req;
@@ -52,15 +68,31 @@ router.get('/cart', authenticateToken, async (req, res) => {
 // Get records for IndentRecordPage
 router.get('/records', authenticateToken, async (req, res) => {
     try {
-        const usersResult = await pool.query('SELECT id, name FROM users ORDER BY name');
+        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
+        const isAll = req.query.all_units === 'true';
 
-        const sessionsResult = await pool.query(`
-            SELECT s.*, u.name as profile_name
+        let usersQuery = 'SELECT id, name, main_unit FROM users';
+        const userParams = [];
+        if (!isAll) {
+            userParams.push(unit);
+            usersQuery += ` WHERE main_unit = $${userParams.length}`;
+        }
+        usersQuery += ' ORDER BY name';
+        const usersResult = await pool.query(usersQuery, userParams);
+
+        let sessionsQuery = `
+            SELECT s.*, u.name as profile_name, u.main_unit as user_main_unit
             FROM indent_sessions s
             LEFT JOIN users u ON s.user_id = u.id
             WHERE s.status IN ('Submitted', 'Approved', 'Completed')
-            ORDER BY s.created_at DESC
-        `);
+        `;
+        const sessionParams = [];
+        if (!isAll) {
+            sessionParams.push(unit);
+            sessionsQuery += ` AND u.main_unit = $${sessionParams.length}`;
+        }
+        sessionsQuery += ` ORDER BY s.created_at DESC`;
+        const sessionsResult = await pool.query(sessionsQuery, sessionParams);
         let sessions = sessionsResult.rows;
 
         for (let s of sessions) {
@@ -74,14 +106,21 @@ router.get('/records', authenticateToken, async (req, res) => {
             s.indent_items = itemsResult.rows;
         }
 
-        const requestsResult = await pool.query(`
-            SELECT ir.*, u.name as profile_name, row_to_json(inv.*) as inventory_items
+        let requestsQuery = `
+            SELECT ir.*, u.name as profile_name, u.main_unit as user_main_unit, row_to_json(inv.*) as inventory_items
             FROM indent_requests ir
             LEFT JOIN users u ON ir.user_id = u.id
             LEFT JOIN inventory_items inv ON ir.item_id = inv.id
             WHERE ir.status IN ('Approved', 'Completed')
-            ORDER BY ir.created_at DESC
-        `);
+        `;
+        const requestParams = [];
+        if (!isAll) {
+            requestParams.push(unit);
+            requestsQuery += ` AND (inv.main_unit = $${requestParams.length} OR (inv.main_unit IS NULL AND u.main_unit = $${requestParams.length}))`;
+        }
+        requestsQuery += ` ORDER BY ir.created_at DESC`;
+
+        const requestsResult = await pool.query(requestsQuery, requestParams);
         const requestsData = requestsResult.rows.map(req => {
             req.profiles = { name: req.profile_name };
             return req;
@@ -96,7 +135,23 @@ router.get('/records', authenticateToken, async (req, res) => {
 // Get approved dates
 router.get('/approved-dates', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query("SELECT created_at FROM indent_requests WHERE status = 'Approved' ORDER BY created_at DESC");
+        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
+        const isAll = req.query.all_units === 'true';
+
+        let query = `
+            SELECT ir.created_at 
+            FROM indent_requests ir
+            LEFT JOIN inventory_items inv ON ir.item_id = inv.id
+            LEFT JOIN users u ON ir.user_id = u.id
+            WHERE ir.status = 'Approved'
+        `;
+        const params = [];
+        if (!isAll) {
+            params.push(unit);
+            query += ` AND (inv.main_unit = $${params.length} OR (inv.main_unit IS NULL AND u.main_unit = $${params.length}))`;
+        }
+        query += ` ORDER BY ir.created_at DESC`;
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -106,15 +161,25 @@ router.get('/approved-dates', authenticateToken, async (req, res) => {
 // Get approved requests in a date range
 router.get('/approved', authenticateToken, async (req, res) => {
     const { start_date, end_date } = req.query;
+    const unit = req.query.main_unit || req.user.main_unit || 'OPD';
+    const isAll = req.query.all_units === 'true';
     try {
-        const result = await pool.query(`
+        let query = `
             SELECT ir.*, row_to_json(inv.*) as inventory_items
             FROM indent_requests ir
             LEFT JOIN inventory_items inv ON ir.item_id = inv.id
+            LEFT JOIN users u ON ir.user_id = u.id
             WHERE ir.status = 'Approved'
             AND ir.created_at >= $1 AND ir.created_at <= $2
-            ORDER BY ir.created_at DESC
-        `, [start_date, end_date]);
+        `;
+        const params = [start_date, end_date];
+        if (!isAll) {
+            params.push(unit);
+            query += ` AND (inv.main_unit = $${params.length} OR (inv.main_unit IS NULL AND u.main_unit = $${params.length}))`;
+        }
+        query += ` ORDER BY ir.created_at DESC`;
+
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -124,14 +189,23 @@ router.get('/approved', authenticateToken, async (req, res) => {
 // Get all indent requests with item details
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const query = `
+        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
+        const isAll = req.query.all_units === 'true';
+
+        let query = `
             SELECT ir.*, 
                    row_to_json(ii.*) as inventory_items 
             FROM indent_requests ir
             LEFT JOIN inventory_items ii ON ir.item_id = ii.id
-            ORDER BY ir.created_at DESC
+            LEFT JOIN users u ON ir.user_id = u.id
         `;
-        const result = await pool.query(query);
+        const params = [];
+        if (!isAll) {
+            params.push(unit);
+            query += ` WHERE (ii.main_unit = $${params.length} OR (ii.main_unit IS NULL AND u.main_unit = $${params.length}))`;
+        }
+        query += ` ORDER BY ir.created_at DESC`;
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -141,6 +215,13 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
     const { item_id, requested_qty, status, snapshot_max_qty, snapshot_balance, indent_remarks } = req.body;
     try {
+        if (req.user.main_unit) {
+            const itemCheck = await pool.query('SELECT main_unit FROM inventory_items WHERE id = $1', [item_id]);
+            if (itemCheck.rows.length > 0 && itemCheck.rows[0].main_unit && itemCheck.rows[0].main_unit !== req.user.main_unit) {
+                return res.status(403).json({ error: `Cannot indent item belonging to ${itemCheck.rows[0].main_unit}` });
+            }
+        }
+
         const result = await pool.query(
             `INSERT INTO indent_requests (user_id, item_id, requested_qty, status, snapshot_max_qty, snapshot_balance, indent_remarks) 
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,

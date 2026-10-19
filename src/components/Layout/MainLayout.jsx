@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Collapse, Menu, Typography, Drawer, Button, Avatar, Dropdown, Modal, Form, Input, message } from 'antd';
+import { Layout, Collapse, Menu, Typography, Drawer, Button, Avatar, Dropdown, Modal, Form, Input, message, Tag } from 'antd';
 import {
     SearchOutlined,
     ShoppingCartOutlined,
@@ -16,6 +16,7 @@ import {
     LockOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { getUnitColor } from '../../lib/colorMappings';
 import logo from '../../img/logo.svg';
 
 const { Header, Sider, Content } = Layout;
@@ -80,12 +81,18 @@ const MainLayout = () => {
         setProfileModalVisible(true);
     };
 
+    const currentUnit = profile?.main_unit || user?.main_unit;
+
     const userMenu = {
         items: [
             {
                 key: 'profile',
                 label: <Text strong>{profile?.name}</Text>
             },
+            ...(currentUnit ? [{
+                key: 'unit',
+                label: <Tag color={getUnitColor(currentUnit)} style={{ margin: 0, fontWeight: 600 }}>{currentUnit}</Tag>
+            }] : []),
             {
                 key: 'role',
                 label: <Text type="secondary">{profile?.role}</Text>
@@ -283,7 +290,12 @@ const MainLayout = () => {
 
                     </div>
 
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {currentUnit && (
+                            <Tag color={getUnitColor(currentUnit)} style={{ margin: 0, fontWeight: 600, fontSize: '13px', padding: '2px 8px' }}>
+                                {currentUnit}
+                            </Tag>
+                        )}
                         {user && (
                             <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
                                 <Avatar

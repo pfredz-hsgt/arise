@@ -20,7 +20,8 @@ import {
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
-import { getSourceColor } from '../../lib/colorMappings';
+import { getSourceColor, getUnitColor } from '../../lib/colorMappings';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -29,6 +30,8 @@ const { Option } = Select;
 const ShortExpArchive = () => {
     const screens = useBreakpoint();
     const isDesktop = screens.lg;
+    const { user, profile } = useAuth();
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
     
     const [loading, setLoading] = useState(true);
     const [drugs, setDrugs] = useState([]);
@@ -47,7 +50,7 @@ const ShortExpArchive = () => {
 
     useEffect(() => {
         fetchArchiveDates();
-    }, []);
+    }, [unit]);
 
     useEffect(() => {
         if (selectedDate) {
@@ -55,11 +58,11 @@ const ShortExpArchive = () => {
         } else {
             setDrugs([]);
         }
-    }, [selectedDate]);
+    }, [selectedDate, unit]);
 
     const fetchArchiveDates = async () => {
         try {
-            const data = await api.get('/shortexp/archive/dates');
+            const data = await api.get(`/shortexp/archive/dates?main_unit=${encodeURIComponent(unit)}`);
             const dates = data.map(d => dayjs(d.archived_date).format('YYYY-MM-DD'));
             setArchiveDates(dates);
             if (dates.length > 0) {
@@ -77,7 +80,7 @@ const ShortExpArchive = () => {
     const fetchArchiveData = async (date) => {
         try {
             setLoading(true);
-            const data = await api.get(`/shortexp/archive/data?date=${date}`);
+            const data = await api.get(`/shortexp/archive/data?date=${date}&main_unit=${encodeURIComponent(unit)}`);
 
             const rows = data.map(record => {
                 const invItem = record.inventory_items || {};
@@ -346,10 +349,11 @@ const ShortExpArchive = () => {
                             <Space>
                                 <HistoryOutlined style={{ color: '#8c8c8c' }} />
                                 Short Expiry Archive
+                                <Tag color={getUnitColor(unit)} style={{ marginLeft: 6, fontWeight: 600 }}>{unit}</Tag>
                             </Space>
                         </Title>
                         <Text type="secondary">
-                            View past short expiry records.
+                            View past short expiry records for {unit}.
                         </Text>
                     </div>
                     <Space wrap>

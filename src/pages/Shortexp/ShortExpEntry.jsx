@@ -4,6 +4,7 @@ import { LeftOutlined, RightOutlined, CheckCircleOutlined } from '@ant-design/ic
 import { api } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { getUnitColor } from '../../lib/colorMappings';
 import dayjs from 'dayjs';
 import ShortExpModal from '../../components/ShortExpModal';
 import ShortExpTabs from '../../components/ShortExpTabs';
@@ -12,7 +13,8 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const ShortExpEntry = () => {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
     const navigate = useNavigate();
 
     // Setup state
@@ -54,7 +56,7 @@ const ShortExpEntry = () => {
             }
             setIsSearching(true);
             try {
-                const data = await api.get(`/inventory?search=${encodeURIComponent(debouncedSearchTerm)}`);
+                const data = await api.get(`/inventory?search=${encodeURIComponent(debouncedSearchTerm)}&main_unit=${encodeURIComponent(unit)}`);
                 setSearchResults(data || []);
             } catch (err) {
                 console.error(err);
@@ -64,7 +66,7 @@ const ShortExpEntry = () => {
             }
         };
         search();
-    }, [debouncedSearchTerm]);
+    }, [debouncedSearchTerm, unit]);
 
     const openItemModal = async (item) => {
         setSelectedItem(item);
@@ -75,7 +77,7 @@ const ShortExpEntry = () => {
         const fetchRaks = async () => {
             setLoadingRaks(true);
             try {
-                const uniqueRaks = await api.get('/inventory/raks');
+                const uniqueRaks = await api.get(`/inventory/raks?main_unit=${encodeURIComponent(unit)}`);
                 const raksList = Array.isArray(uniqueRaks) ? uniqueRaks.map(r => typeof r === 'object' ? r.row : r) : [];
                 setRaks(raksList);
             } catch (err) {
@@ -87,16 +89,16 @@ const ShortExpEntry = () => {
         };
 
         fetchRaks();
-    }, []);
+    }, [unit]);
 
     const initSessionAndItems = async (rak) => {
         setLoading(true);
         try {
-            // Fetch ALL inventory items for this rak
-            const invItems = await api.get(`/inventory?row=${encodeURIComponent(rak)}`);
+            // Fetch ALL inventory items for this rak and unit
+            const invItems = await api.get(`/inventory?row=${encodeURIComponent(rak)}&main_unit=${encodeURIComponent(unit)}`);
 
             if (!invItems || invItems.length === 0) {
-                message.warning(`No items found in Rak ${rak}`);
+                message.warning(`No items found in Rak ${rak} for ${unit}`);
                 return false;
             }
 
@@ -195,9 +197,12 @@ const ShortExpEntry = () => {
     if (!isStarted) {
         return (
             <div style={{ maxWidth: 500, margin: '40px auto', textAlign: 'center' }}>
-                <Title level={3}>Record Short Expiry</Title>
+                <Title level={3}>
+                    Record Short Expiry
+                    <Tag color={getUnitColor(unit)} style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}>{unit}</Tag>
+                </Title>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-                    Select a Rak to iterate through all its items and record short expiry dates.
+                    Select a Rak from {unit} to iterate through all its items and record short expiry dates.
                 </Text>
 
                 <Card>

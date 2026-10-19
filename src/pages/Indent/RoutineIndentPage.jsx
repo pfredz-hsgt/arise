@@ -11,7 +11,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const RoutineIndentPage = () => {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [items, setItems] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -74,11 +74,12 @@ const RoutineIndentPage = () => {
 
             setSessionId(currentSessionId);
 
-            // 2. Fetch inventory items for this rak
-            const invItems = await api.get(`/inventory?indent_source=OPD Substor&row=${encodeURIComponent(rak)}`);
+            // 2. Fetch inventory items for this rak and unit
+            const unit = profile?.main_unit || user?.main_unit || 'OPD';
+            const invItems = await api.get(`/inventory?row=${encodeURIComponent(rak)}&main_unit=${encodeURIComponent(unit)}`);
 
             if (!invItems || invItems.length === 0) {
-                message.warning({ content: `No items found in Rak ${rak}`, key: 'no-items' });
+                message.warning({ content: `No items found in Rak ${rak} for ${unit}`, key: 'no-items' });
                 navigate('/home');
                 return;
             }

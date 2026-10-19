@@ -20,7 +20,7 @@ import {
 } from 'antd';
 import { EditOutlined, FormOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
-import { getSourceColor, getPuchaseTypeColor, getStdKtColor } from '../../lib/colorMappings';
+import { getSourceColor, getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
 import dayjs from 'dayjs';
 import CustomDateInput from '../../components/CustomDateInput';
 import { useAuth } from '../../contexts/AuthContext';
@@ -190,9 +190,12 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
 
                         {/* Tags */}
                         <Space wrap style={{ marginBottom: 8, justifyContent: 'center' }}>
+                            {drug.main_unit && <Tag color={getUnitColor(drug.main_unit)} style={{ fontWeight: 600 }}>{drug.main_unit}</Tag>}
                             {drug.puchase_type && <Tag color={getPuchaseTypeColor(drug.puchase_type)}>{drug.puchase_type}</Tag>}
                             {drug.std_kt && <Tag color={getStdKtColor(drug.std_kt)}>{drug.std_kt}</Tag>}
                             {drug.row && <Tag>Row: {drug.row}</Tag>}
+                            {drug.tingkat !== undefined && drug.tingkat !== null && <Tag>Tingkat: {drug.tingkat}</Tag>}
+                            {drug.petak && <Tag>Petak: {drug.petak}</Tag>}
                         </Space>
 
                         {/* Remarks */}

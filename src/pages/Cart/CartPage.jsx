@@ -28,7 +28,8 @@ import {
     ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { api } from '../../lib/api';
-import { getPuchaseTypeColor, getStdKtColor } from '../../lib/colorMappings';
+import { getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
+import { useAuth } from '../../contexts/AuthContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
@@ -154,6 +155,8 @@ const EditQuantityModal = ({ visible, onCancel, onOk, editingItem, updatingQty }
 
 const CartPage = () => {
     const navigate = useNavigate();
+    const { user, profile } = useAuth();
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
     const [loading, setLoading] = useState(true);
     const [sessions, setSessions] = useState([]);
     const [selectedSessions, setSelectedSessions] = useState([]);
@@ -173,14 +176,14 @@ const CartPage = () => {
 
     useEffect(() => {
         fetchCartSessions();
-    }, []);
+    }, [unit]);
 
     const fetchCartSessions = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
 
-            // Fetch sessions that are "Submitted" (Pending Issuer Action)
-            const { sessionsData, requestsData } = await api.get('/indents/cart');
+            // Fetch sessions that are "Submitted" (Pending Issuer Action) for user's main_unit
+            const { sessionsData, requestsData } = await api.get(`/indents/cart?main_unit=${encodeURIComponent(unit)}`);
 
             // Sort and deduplicate items inside each session
             const processedSessions = (sessionsData || [])
@@ -680,8 +683,11 @@ const CartPage = () => {
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                     <div>
-                        <Title level={3} style={{ margin: 0 }}>Indent Cart</Title>
-                        <Text type="secondary">{sessions.length} submitted session(s) waiting for approval</Text>
+                        <Title level={3} style={{ margin: 0 }}>
+                            Indent Cart
+                            <Tag color={getUnitColor(unit)} style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}>{unit}</Tag>
+                        </Title>
+                        <Text type="secondary">{sessions.length} submitted session(s) from {unit} waiting for approval</Text>
                     </div>
                     <Space wrap>
 

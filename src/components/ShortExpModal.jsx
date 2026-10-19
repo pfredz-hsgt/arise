@@ -3,7 +3,7 @@ import { Modal, Typography, Space, Tag, Spin, message } from 'antd';
 import { api } from '../lib/api';
 import dayjs from 'dayjs';
 import ShortExpTabs from './ShortExpTabs';
-import { getSourceColor } from '../lib/colorMappings';
+import { getSourceColor, getUnitColor } from '../lib/colorMappings';
 
 const { Title, Text } = Typography;
 
@@ -89,6 +89,7 @@ const ShortExpModal = ({ isOpen, onClose, selectedItem }) => {
                     </Space> <br />
 
                     <Space wrap style={{ marginBottom: 8, justifyContent: 'center' }}>
+                        {selectedItem.main_unit && <Tag color={getUnitColor(selectedItem.main_unit)} style={{ fontWeight: 600 }}>{selectedItem.main_unit}</Tag>}
                         {selectedItem.row && <Tag color="blue">Rak: {selectedItem.row}</Tag>}
                         {selectedItem.puchase_type && <Tag color="orange">{selectedItem.puchase_type}</Tag>}
                         {selectedItem.indent_source && <Tag color={getSourceColor(selectedItem.indent_source) || "green"}>{selectedItem.indent_source}</Tag>}

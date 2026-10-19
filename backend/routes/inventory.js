@@ -18,11 +18,13 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Get unique raks for OPD Substor
+// Get unique raks for user's main_unit
 router.get('/raks', authenticateToken, async (req, res) => {
     try {
+        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
         const result = await pool.query(
-            "SELECT DISTINCT row FROM inventory_items WHERE indent_source = 'OPD Substor' AND row IS NOT NULL ORDER BY row ASC"
+            "SELECT DISTINCT row FROM inventory_items WHERE main_unit = $1 AND row IS NOT NULL ORDER BY row ASC",
+            [unit]
         );
         res.json(result.rows);
     } catch (err) {
@@ -30,16 +32,24 @@ router.get('/raks', authenticateToken, async (req, res) => {
     }
 });
 
-// Get all inventory items
+// Get all inventory items (filtered by user's main_unit by default)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const { indent_source, row, search, main_unit } = req.query;
+        const { indent_source, row, search, main_unit, all_units } = req.query;
         let query = 'SELECT * FROM inventory_items';
         const params = [];
         const conditions = [];
 
-        if (main_unit) {
-            params.push(main_unit);
+        // Unit filtering:
+        // If all_units === 'true' and role === 'Issuer', allow seeing all units (used in Admin InventoryTable)
+        // Otherwise, filter by requested main_unit OR user's own main_unit
+        let effectiveUnit = main_unit;
+        if (!effectiveUnit && all_units !== 'true') {
+            effectiveUnit = req.user.main_unit || 'OPD';
+        }
+
+        if (effectiveUnit && effectiveUnit !== 'ALL') {
+            params.push(effectiveUnit);
             conditions.push(`main_unit = $${params.length}`);
         }
 
@@ -76,7 +86,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM inventory_items WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
-        res.json(result.rows[0]);
+        const item = result.rows[0];
+        
+        // Ensure non-issuers can only access items matching their main_unit
+        if (req.user.role !== 'Issuer' && req.user.main_unit && item.main_unit && item.main_unit !== req.user.main_unit) {
+            return res.status(403).json({ error: 'Access denied: Item belongs to another department' });
+        }
+        
+        res.json(item);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -19,7 +19,8 @@ import {
     EyeOutlined,
 } from '@ant-design/icons';
 import { api } from '../../lib/api';
-import { getSourceColor, getStdKtColor } from '../../lib/colorMappings';
+import { getSourceColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
+import { useAuth } from '../../contexts/AuthContext';
 import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -28,6 +29,8 @@ const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
 const IndentListPage = () => {
+    const { user, profile } = useAuth();
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
     const [loading, setLoading] = useState(true);
     const [indentItems, setIndentItems] = useState([]);
     const [groupedItems, setGroupedItems] = useState({});
@@ -37,7 +40,7 @@ const IndentListPage = () => {
 
     useEffect(() => {
         fetchDatesWithIndents();
-    }, []);
+    }, [unit]);
 
     useEffect(() => {
         if (selectedDate) {
@@ -51,7 +54,7 @@ const IndentListPage = () => {
 
     const fetchDatesWithIndents = async () => {
         try {
-            const data = await api.get('/indents/approved-dates');
+            const data = await api.get(`/indents/approved-dates?main_unit=${encodeURIComponent(unit)}`);
 
             // Extract unique dates
             const uniqueDates = [...new Set(
@@ -71,7 +74,7 @@ const IndentListPage = () => {
             const startOfDay = selectedDate.startOf('day').toISOString();
             const endOfDay = selectedDate.endOf('day').toISOString();
 
-            const data = await api.get(`/indents/approved?start_date=${encodeURIComponent(startOfDay)}&end_date=${encodeURIComponent(endOfDay)}`);
+            const data = await api.get(`/indents/approved?start_date=${encodeURIComponent(startOfDay)}&end_date=${encodeURIComponent(endOfDay)}&main_unit=${encodeURIComponent(unit)}`);
 
             setIndentItems(data || []);
         } catch (error) {
@@ -271,7 +274,7 @@ const IndentListPage = () => {
                 // Generate the doc using our helper
                 const doc = generatePDFDocument(source, items);
                 const timestamp = new Date().toISOString().split('T')[0];
-                const filename = `OPD_Indent_${source}_${timestamp}.pdf`;
+                const filename = `${unit}_Indent_${source}_${timestamp}.pdf`;
 
                 if (mode === 'download') {
                     // A. DOWNLOAD MODE
@@ -336,9 +339,12 @@ const IndentListPage = () => {
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 {/* Header */}
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Previous Indents</Title>
+                    <Title level={3} style={{ margin: 0 }}>
+                        Previous Indents
+                        <Tag color={getUnitColor(unit)} style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}>{unit}</Tag>
+                    </Title>
                     <Text type="secondary">
-                        View historical indent records by date
+                        View historical indent records for {unit} by date
                     </Text>
                 </div>
 

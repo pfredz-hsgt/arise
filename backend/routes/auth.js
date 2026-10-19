@@ -151,9 +151,19 @@ export const authenticateToken = (req, res, next) => {
 
     if (token == null) return res.sendStatus(401);
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
+    jwt.verify(token, JWT_SECRET, async (err, user) => {
         if (err) return res.sendStatus(403);
         req.user = user;
+        if (!req.user.main_unit) {
+            try {
+                const uRes = await pool.query('SELECT main_unit FROM users WHERE id = $1', [req.user.id]);
+                if (uRes.rows.length > 0) {
+                    req.user.main_unit = uRes.rows[0].main_unit || 'OPD';
+                }
+            } catch (e) {
+                req.user.main_unit = 'OPD';
+            }
+        }
         next();
     });
 };
@@ -178,7 +188,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
         // using COALESCE for name and email, but direct assignment for phis fields to allow clearing them.
         const encryptedPhisPassword = phis_password ? encrypt(phis_password) : (phis_password === '' ? '' : null);
         const result = await pool.query(
-            'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email), phis_username = $3, phis_password = $4 WHERE id = $5 RETURNING id, email, name, role, phis_username, phis_password',
+            'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email), phis_username = $3, phis_password = $4 WHERE id = $5 RETURNING id, email, name, role, phis_username, phis_password, main_unit',
             [name, email, encryptedPhisPassword, req.user.id]
         );
         const user = result.rows[0];

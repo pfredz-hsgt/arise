@@ -1,0 +1,22 @@
+introduce mobile layout - share the logic,  split the view
+maintain api calls,  add breakpoint for view
+use both css breakpoints (static components) and javascript window hooks (forms/dynamic component)
+
+example UI
+https://zip-cape-43560898.figma.site/
+https://high-swore-10415596.figma.site/
+
+
+Home View
+
+add Bottom Navbar - 
+
+[Home]
+Home Page
+
+[Add +]
+Add Routine Indent / Urgent Indent
+
+[Cart]
+revise how cart works - current implement - user add indent on urgent indent page,  automatically enters cart (irreversible) - cart only appears on issuers view
+new cart - user add indent on urgent indent page - appears on user's cart (each user can only see own indented items only) - can edit/delete/finalize qty - then click submit - then appear on issuers cart

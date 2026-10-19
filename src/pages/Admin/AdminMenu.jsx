@@ -16,11 +16,11 @@ const AdminMenuPage = () => {
             setExporting(true);
             message.loading({ content: 'Exporting data...', key: 'export' });
 
-            // Fetch Inventory
-            const inventoryData = await api.get('/inventory');
+            // Fetch Inventory (all units)
+            const inventoryData = await api.get('/inventory?all_units=true');
 
-            // Fetch Indents with related item name
-            const indentData = await api.get('/indents');
+            // Fetch Indents with related item name (all units)
+            const indentData = await api.get('/indents?all_units=true');
 
             // Create Workbook
             const wb = XLSX.utils.book_new();

@@ -61,6 +61,15 @@ router.post('/bulk', authenticateToken, async (req, res) => {
     }
 
     try {
+        if (req.user.main_unit) {
+            const itemIds = items.map(i => i.item_id);
+            const checkRes = await pool.query('SELECT main_unit FROM inventory_items WHERE id = ANY($1::uuid[])', [itemIds]);
+            const invalid = checkRes.rows.find(r => r.main_unit && r.main_unit !== req.user.main_unit);
+            if (invalid) {
+                return res.status(403).json({ error: `Cannot indent item belonging to ${invalid.main_unit}` });
+            }
+        }
+
         const values = [];
         const placeholders = [];
         let paramIndex = 1;
@@ -90,6 +99,13 @@ router.post('/bulk', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
     const data = req.body;
     try {
+        if (req.user.main_unit) {
+            const checkRes = await pool.query('SELECT main_unit FROM inventory_items WHERE id = $1', [data.item_id]);
+            if (checkRes.rows.length > 0 && checkRes.rows[0].main_unit && checkRes.rows[0].main_unit !== req.user.main_unit) {
+                return res.status(403).json({ error: `Cannot indent item belonging to ${checkRes.rows[0].main_unit}` });
+            }
+        }
+
         const result = await pool.query(
             `INSERT INTO indent_items (
                 session_id, item_id, requested_qty, indent_remarks, snapshot_max_qty, snapshot_balance

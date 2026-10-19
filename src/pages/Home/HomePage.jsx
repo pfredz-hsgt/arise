@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Card, Button, Form, Select, Spin, message, Row, Col, Modal, BorderBeam } from 'antd';
+import { Typography, Card, Button, Form, Select, Spin, message, Row, Col, Modal, BorderBeam, Tag } from 'antd';
 import { api } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { RocketOutlined, AuditOutlined } from '@ant-design/icons';
+import { getUnitColor } from '../../lib/colorMappings';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -13,11 +14,13 @@ const HomePage = () => {
     const navigate = useNavigate();
     const [raks, setRaks] = useState([]);
     const [loadingRaks, setLoadingRaks] = useState(true);
+    const unit = profile?.main_unit || user?.main_unit || 'OPD';
 
     useEffect(() => {
         const fetchRaks = async () => {
             try {
-                const data = await api.get('/inventory/raks');
+                setLoadingRaks(true);
+                const data = await api.get(`/inventory/raks?main_unit=${encodeURIComponent(unit)}`);
                 setRaks(data.map(item => item.row));
             } catch (error) {
                 console.error("Error fetching raks", error);
@@ -28,7 +31,7 @@ const HomePage = () => {
         };
 
         fetchRaks();
-    }, []);
+    }, [unit]);
 
     const handleStartRoutine = async (values) => {
         if (!values.rak) {
@@ -80,13 +83,18 @@ const HomePage = () => {
                     >
                         <Card
                             hoverable
-                            title={<><AuditOutlined style={{ color: '#1890ff', marginRight: 8 }} /> Routine Indent</>}
+                            title={
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span><AuditOutlined style={{ color: '#1890ff', marginRight: 8 }} /> Routine Indent</span>
+                                    <Tag color={getUnitColor(unit)} style={{ fontWeight: 600 }}>{unit}</Tag>
+                                </div>
+                            }
                             style={{ height: '100%' }}
                             styles={{ body: { display: 'flex', flexDirection: 'column', height: 'calc(100% - 58px)' } }}
                         >
                             <Text style={{ display: 'block', marginBottom: 24 }}>
                                 Indent for drugs listed under specific Raks.
-                                The generated list will be applicable for OPD Substore Items only.
+                                The generated list will be applicable for {unit} items only.
                             </Text>
 
                             <div style={{ marginTop: 'auto' }}>
