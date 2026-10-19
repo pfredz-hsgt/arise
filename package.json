@@ -22,6 +22,7 @@
     "@ant-design/icons": "^6.2.3",
     "@phosphor-icons/react": "^2.1.10",
     "antd": "^6.4.3",
+    "antd-mobile": "^5.43.0",
     "axios": "^1.16.1",
     "dayjs": "^1.11.19",
     "dotenv": "^17.3.1",

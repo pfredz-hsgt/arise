@@ -28,3 +28,16 @@
 .search-result-item:hover {
   background-color: #f5f5f5 !important;
 }
+
+/* Responsive adjustments for mobile viewports */
+@media (max-width: 767.98px) {
+  .site-content {
+    margin: 8px 6px !important;
+  }
+  .site-content > div {
+    padding: 8px !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
