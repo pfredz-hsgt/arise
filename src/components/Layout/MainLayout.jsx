@@ -246,6 +246,20 @@ const MainLayout = () => {
             >
                 <div style={{ padding: '24px 16px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
+                    <Title level={4} style={{
+                        color: 'white',
+                        margin: 0,
+                        letterSpacing: '6px',
+                        fontWeight: 450,
+                        background: 'linear-gradient(to right, #ffffffff 0%, #ffeefbff 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textTransform: 'uppercase',
+                        fontSize: '26px',
+                        fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                    }}>
+                        ARISE
+                    </Title>
                     <Typography.Text style={{
                         color: 'rgba(255,255,255,0.5)',
                         fontSize: '10px',

@@ -111,18 +111,12 @@ const RoutineIndentMobileView = ({
                 >
                     <span style={{ fontWeight: 600, fontSize: 16 }}>Rak {rak}</span>
                 </NavBar>
-                <ProgressBar
-                    percent={progressPercent}
-                    style={{
-                        '--track-width': '3px',
-                        '--fill-color': '#1677ff'
-                    }}
-                />
+
             </div>
 
             {/* Content Area */}
             <div style={{ padding: '12px 12px 20px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                
+
                 {/* Drug Info Card */}
                 <div style={{
                     background: '#ffffff',
@@ -199,9 +193,9 @@ const RoutineIndentMobileView = ({
                     flexDirection: 'column',
                     gap: 14
                 }}>
-                    {/* Max Quota vs Balance Row */}
+                    {/* Max Qty vs Balance */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        {/* Max Qty (Quota) */}
+                        {/* Max Qty */}
                         <div style={{
                             background: '#f8fafc',
                             borderRadius: 10,
@@ -210,7 +204,7 @@ const RoutineIndentMobileView = ({
                             textAlign: 'center'
                         }}>
                             <div style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginBottom: 4 }}>
-                                Max Quota
+                                Max Qty
                             </div>
                             <div style={{ fontSize: 24, fontWeight: 700, color: '#334155' }}>
                                 {currentMaxQty}
@@ -229,7 +223,7 @@ const RoutineIndentMobileView = ({
                             justifyContent: 'center'
                         }}>
                             <div style={{ fontSize: 12, color: '#1677ff', fontWeight: 600, marginBottom: 2 }}>
-                                Shelf Balance
+                                Balance
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <Input
@@ -275,7 +269,7 @@ const RoutineIndentMobileView = ({
                                     padding: '6px 0'
                                 }}
                             >
-                                Out of Stock (0)
+                                NIL (0)
                             </Button>
                             <Button
                                 size="small"
@@ -292,7 +286,7 @@ const RoutineIndentMobileView = ({
                                     padding: '6px 0'
                                 }}
                             >
-                                Full ({currentMaxQty})
+                                MAX ({currentMaxQty})
                             </Button>
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
@@ -330,11 +324,8 @@ const RoutineIndentMobileView = ({
                             alignItems: 'center',
                             marginBottom: 8
                         }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: '#1e40af' }}>
-                                Indent Qty (To Order)
-                            </span>
-                            <span style={{ fontSize: 12, color: '#3b82f6', fontWeight: 500 }}>
-                                Quota ({currentMaxQty}) - Balance ({currentBalance ?? 0})
+                            <span style={{ fontSize: 14, fontWeight: 600, color: '#1e40af' }}>
+                                Indent Qty
                             </span>
                         </div>
 
@@ -440,7 +431,7 @@ const RoutineIndentMobileView = ({
                                 Short Expiry Batch
                             </div>
                             <div style={{ fontSize: 11, color: '#c2410c' }}>
-                                Record expiring batches for shelf
+                                If available
                             </div>
                         </div>
                     </div>
@@ -521,8 +512,16 @@ const RoutineIndentMobileView = ({
                 background: '#ffffff',
                 borderTop: '1px solid #e2e8f0',
                 boxShadow: '0 -4px 12px rgba(0,0,0,0.06)',
-                padding: '8px 12px'
+                padding: '0 12px 12px 12px' // 🛠️ Removed top padding to let the progress bar sit at the edge
             }}>
+                <ProgressBar
+                    percent={progressPercent}
+                    style={{
+                        '--track-width': '3px',
+                        '--fill-color': '#1677ff',
+                        margin: '0 -12px 12px -12px' // 🛠️ Negative margin pulls it flush to the left/right edges, bottom margin adds space to the buttons
+                    }}
+                />
                 <SafeArea position="bottom" />
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <Button
@@ -574,6 +573,7 @@ const RoutineIndentMobileView = ({
                     </Button>
                 </div>
             </div>
+
 
             {/* Short Expiry Modal */}
             <ShortExpModal

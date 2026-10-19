@@ -1,5 +1,141 @@
 # Changelog
 
+
+
+## \[Unreleased\] - 2026-10-19
+
+### Added
+
+#### 1. Extracted Shared Logic: [useShortExp.js](file:///d:/dev/arise/src/components/useShortExp.js)
+Created a headless custom hook encapsulating all batch data management:
+- Loads existing short expiry records from `/shortexp/item/${selectedItem.id}`.
+- Manages adding, removing, and field changes across batches.
+- Handles saving and payload formatting to `/shortexp/item/${selectedItem.id}/batches`.
+- Provides loading and saving spinner states.
+
+#### 2. Preserved Desktop Experience: [ShortExpDesktopModal.jsx](file:///d:/dev/arise/src/components/ShortExpDesktopModal.jsx)
+Maintains the exact original Ant Design desktop modal with [ShortExpTabs.jsx](file:///d:/dev/arise/src/components/ShortExpTabs.jsx) for screens $\ge 768\text{px}$.
+
+#### 3. Created Mobile Touch Experience: [ShortExpMobilePopup.jsx](file:///d:/dev/arise/src/components/ShortExpMobilePopup.jsx)
+Replaced the center desktop dialog on mobile with an Ant Design Mobile slide-up bottom sheet (`Popup`):
+- **Slide-Up Bottom Sheet**: Smooth iOS/Android bottom drawer with drag indicator and quick `✕` close button.
+- **Drug Summary Banner**: Highlights drug name, PKU pill badge, unit, and shelf row.
+- **Batch Navigation**: Uses `CapsuleTabs` (`[Batch 1]` `[Batch 2]`) with a quick `+ Add` button for fast thumb switching.
+- **Touch-Friendly Controls**:
+  - Direct numeric input with `-` and `+` adjustment buttons for quantity.
+  - **Native Wheel Date Picker**: Tapping the date field opens `antd-mobile`'s smooth wheel picker (`precision="day"`) instead of desktop calendars that clip or overflow on small viewports.
+  - Multi-line `TextArea` for remarks with character counter.
+  - Delete batch option with confirmation when more than 1 batch exists.
+- **Sticky Bottom Action Bar**: Pinned at the bottom with `SafeArea` support, featuring large `Cancel` and `Save Batches` buttons.
+
+#### 4. Connected the Coordinator: [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx)
+```jsx
+const ShortExpModal = ({ isOpen, onClose, selectedItem }) => {
+    const isMobile = useIsMobile(768);
+    const shortExpState = useShortExp({ isOpen, onClose, selectedItem });
+
+    if (!isOpen) return null;
+
+    return isMobile ? (
+        <ShortExpMobilePopup
+            isOpen={isOpen}
+            onClose={onClose}
+            selectedItem={selectedItem}
+            {...shortExpState}
+        />
+    ) : (
+        <ShortExpDesktopModal
+            isOpen={isOpen}
+            onClose={onClose}
+            selectedItem={selectedItem}
+            {...shortExpState}
+        />
+    );
+};
+```
+
+---
+
+### Global Impact
+Because [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx) preserves its original props interface (`isOpen`, `onClose`, `selectedItem`), this mobile slide-up experience automatically works across all screens that trigger it:
+- [RoutineIndentMobileView.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineIndentMobileView.jsx)
+- [RoutineSummaryPage.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryPage.jsx)
+- [ShortExpPage.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpPage.jsx)
+- [ShortExpEntry.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntry.jsx)
+
+
+## \[Unreleased\] - 2026-10-19
+
+### Added
+
+- Added a dedicated mobile view for the Routine Indent workflow using Ant Design Mobile (antd-mobile).
+- Added `useIsMobile.js`, a responsive viewport breakpoint hook using `window.matchMedia` with a default breakpoint of 768px.
+- Added `useRoutineIndent.js`, a shared headless hook that centralizes Routine Indent business logic.
+- Added `RoutineIndentDesktopView.jsx` to preserve the existing Ant Design desktop interface.
+- Added `RoutineIndentMobileView.jsx` with a touch-friendly interface optimized for pharmacy staff performing shelf stock counts on mobile devices.
+- Added a sticky mobile header displaying the current rack (Rak), item progress, and a progress bar.
+- Added a drug information card displaying the drug name, PKU tag, and unit indicators.
+- Added high-visibility numeric balance input with one-tap presets:
+  - Out of Stock (0): Sets the indent quantity to the full quota.
+  - Full (Max): Sets the indent quantity to zero.
+- Added quick adjustment controls using minus and plus steppers for shelf balance and indent quantity.
+- Added an indent recommendation card displaying the quota, balance, and calculated indent quantity.
+- Added a dedicated Short Expiry action button to open the Short Expiry modal.
+- Added expandable remarks with a character counter.
+- Added a sticky bottom navigation bar with SafeArea support and accessible Prev, Next, and Finish buttons.
+
+### Changed
+
+#### Routine Indent Architecture
+
+- Adopted a Headless Logic + Split View architecture to separate business logic from desktop and mobile presentation.
+- Extracted shared Routine Indent logic into `useRoutineIndent.js`, eliminating duplicated business logic between desktop and mobile views.
+- Updated `RoutineIndentPage.jsx` to detect the viewport size and render the appropriate interface:
+  - Mobile view for screens below 768px.
+  - Desktop view for screens 768px and above.
+- Integrated Ant Design Mobile alongside the existing Ant Design desktop components.
+
+#### Shared Business Logic
+
+- Centralized session draft creation and resumption through `/indent_sessions/draft`.
+- Centralized inventory loading and item data retrieval through `/indent_items` and `/inventory`.
+- Preserved automatic indent quantity calculation using `Math.max(0, Max Qty - Balance)`.
+- Centralized draft item saving, upserting, and inventory balance updates.
+- Preserved automatic focus on the Balance input when transitioning between items.
+- Added shared helper methods for quick stock adjustments, including `setBalanceQuick`, `adjustQty`, and `adjustBalance`.
+
+#### Responsive Layout
+
+- Updated `style.css` with responsive `.site-content` padding adjustments for screens below 768px.
+- Removed excessive desktop margins on mobile screens to maximize usable space.
+- Optimized mobile controls for touch interaction and one-handed operation.
+
+### User Experience
+
+- Improved mobile usability for pharmacy staff performing routine drug shelf counts.
+- Reduced manual input through one-tap stock presets and quick adjustment steppers.
+- Improved visibility of drug information, stock balance, quota, and recommended indent quantity.
+- Kept navigation controls accessible through a sticky bottom action bar.
+- Preserved the original desktop layout and behavior for screens 768px and above.
+- Added responsive behavior that updates automatically when the browser window is resized or the device orientation changes.
+
+### Testing and Verification
+
+- Production build verified using `npm run build`.
+- Build completed successfully with zero errors.
+- Mobile layout can be tested by resizing the browser below 768px or using browser developer tools in device emulation mode.
+
+### Commit
+
+- Author: pfredz-hsgt
+- Commit: ee31fe11148b547c3c5923ff19ef926fea7e93f2
+- Date: October 19, 2026, 12:07 PM
+- Branch: main
+- Remote: origin/main
+- Message: add mobile view for RoutineIndent
+- Changes: 9 files changed, 1,549 insertions(+), 384 deletions(-)
+
+
 ## \[Unreleased\] - 2026-10-19
 
 ### Added
