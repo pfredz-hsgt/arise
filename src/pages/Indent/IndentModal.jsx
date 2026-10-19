@@ -24,13 +24,17 @@ import { getSourceColor, getPuchaseTypeColor, getStdKtColor, getUnitColor } from
 import dayjs from 'dayjs';
 import CustomDateInput from '../../components/CustomDateInput';
 import { useAuth } from '../../contexts/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
+import IndentMobilePopup from './IndentMobilePopup';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 500 }) => {
+    const isMobile = useIsMobile(768);
     const { user } = useAuth();
     const [form] = Form.useForm();
+
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(null);
     const [maxQty, setMaxQty] = useState(null);
@@ -150,6 +154,17 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
     }, [visible, form]);
 
     if (!drug) return null;
+
+    if (isMobile) {
+        return (
+            <IndentMobilePopup
+                drug={drug}
+                visible={visible}
+                onClose={onClose}
+                onSuccess={onSuccess}
+            />
+        );
+    }
 
     return (
         <>

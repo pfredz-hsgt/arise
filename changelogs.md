@@ -1,6 +1,66 @@
 # Changelog
 
+## \[Unreleased\] - 2026-10-19
 
+### Added
+
+#### 1. Extracted Shared Logic: [useRoutineSummary.js](file:///d:/dev/arise/src/pages/Indent/useRoutineSummary.js)
+Moved 100% of the session data fetching, inventory alignment, item editing, and submission logic into a headless custom hook:
+- Loads active draft session (`/indent_sessions/draft`) and retrieves all indented items.
+- Aligns full rack inventory to automatically surface un-indented shelf items as mock items (`requested_qty: 0`).
+- Manages single-item editing (updating requested qty, balance, inventory sync, and remarks).
+- Calculates key metrics: `totalCount`, `indentedCount`, `lastItemIndex`, and `progressPercent`.
+- Handles resume routing (`/routine-indent?rak=${rak}&resumeItemId=...`).
+- Handles final submission (`/indent_items/bulk` and updating session status to `Submitted`).
+- Provides quick stock adjustment helpers (`setEditBalanceQuick`, `adjustEditBalance`, `adjustEditQty`).
+
+#### 2. Preserved Desktop Experience: [RoutineSummaryDesktopView.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryDesktopView.jsx)
+Maintains the complete original Ant Design desktop layout for screens $\ge 768\text{px}$:
+- Table view and List view toggles (`TableOutlined`, `UnorderedListOutlined`).
+- Desktop Table with custom scroll and row-click edit modal (`width={800}`).
+- Desktop progress bar, Rak tag, and resume affix.
+
+#### 3. Created Mobile Touch Experience: [RoutineSummaryMobileView.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryMobileView.jsx)
+Crafted specifically for pharmacy staff reviewing and confirming indents on mobile:
+- **Sticky Header**: `NavBar` with shelf name (`Rak ${rak} Summary`) and a quick **Resume** action button to jump directly back to shelf walking.
+- **Session Metrics Card**:
+  - Highlights session creator and timestamp.
+  - Overall progress bar with `Stopped at item X of Y` indicator.
+  - 3-column stats summary: **Total Items**, **Indented** (green), and **NIL / 0**.
+- **Search & Filter Tabs**:
+  - `SearchBar` to find medicines or PKUs instantly.
+  - `CapsuleTabs` to quickly filter by:
+    - `All (${total})`
+    - `Indented (${indentedCount})`
+    - `NIL (${zeroCount})`
+- **Touch Item Cards**:
+  - Clear drug name with warm amber PKU pill.
+  - Quota and shelf balance indicators (`Max: X | Bal: Y`).
+  - Distinct requested quantity display with green check indicator.
+  - Remarks snippet preview if notes were added.
+  - `Last Stopped` badge marking the item where the user stopped counting.
+- **Item Edit Bottom Sheet (`Popup`)**:
+  - Tapping any card opens a slide-up bottom sheet instead of a desktop dialog.
+  - Includes `NIL (0)` and `MAX (quota)` quick-tap presets, plus numeric steppers (`-` / `+`).
+  - Short Expiry button opening the mobile [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx).
+  - Multi-line remarks `TextArea` with character counter.
+- **Sticky Bottom Action Bar**:
+  - Pinned with `SafeArea` at the bottom of the screen.
+  - Prominent **Confirm & Send ({count} Items)** button with a mobile confirmation prompt (`Dialog.confirm`) before final submission to Substore/Issuer.
+
+#### 4. Connected the Coordinator: [RoutineSummaryPage.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryPage.jsx)
+```jsx
+const RoutineSummaryPage = () => {
+    const isMobile = useIsMobile(768);
+    const summaryState = useRoutineSummary();
+
+    return isMobile ? (
+        <RoutineSummaryMobileView {...summaryState} />
+    ) : (
+        <RoutineSummaryDesktopView {...summaryState} />
+    );
+};
+```
 
 ## \[Unreleased\] - 2026-10-19
 

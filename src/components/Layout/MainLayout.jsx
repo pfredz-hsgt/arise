@@ -442,7 +442,8 @@ const MainLayout = () => {
             width: 100%;
           }
           .site-content {
-            margin-top: 88px !important; /* 64px header + 24px existing top margin */
+            margin-top: 64px !important; /* 64px header + 24px existing top margin */
+            /* background-color: #e2e2e2ff; */
           }
         }
       `}</style>

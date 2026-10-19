@@ -114,7 +114,7 @@ const RoutineSummaryMobileView = ({
             display: 'flex',
             flexDirection: 'column',
             minHeight: '100%',
-            paddingBottom: '88px', // Space for fixed bottom action bar
+            paddingBottom: '88px', // Space for fixed bottom action bar 
             background: '#f8fafc'
         }}>
             {/* Mobile Header */}
@@ -256,7 +256,7 @@ const RoutineSummaryMobileView = ({
                     <CapsuleTabs activeKey={filterTab} onChange={setFilterTab}>
                         <CapsuleTabs.Tab title={`All (${totalCount})`} key="all" />
                         <CapsuleTabs.Tab title={`Indent (${indentedCount})`} key="indented" />
-                        <CapsuleTabs.Tab title={`Zero Qty (${zeroCount})`} key="zero" />
+                        <CapsuleTabs.Tab title={`No Indent (${zeroCount})`} key="zero" />
                     </CapsuleTabs>
                 </div>
 
