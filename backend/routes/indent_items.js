@@ -44,16 +44,10 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// Get short exp record by item_id
+// Get short exp record by item_id (kept for backwards compatibility)
 router.get('/shortexp/:item_id', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT * FROM indent_items 
-            WHERE item_id = $1 AND (batch_no_1 IS NOT NULL OR batch_no_2 IS NOT NULL)
-            ORDER BY created_at DESC LIMIT 1
-        `, [req.params.item_id]);
-        if (result.rows.length > 0) res.json(result.rows[0]);
-        else res.json(null);
+        res.json(null);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -72,19 +66,16 @@ router.post('/bulk', authenticateToken, async (req, res) => {
         let paramIndex = 1;
 
         items.forEach((item) => {
-            placeholders.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+            placeholders.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
             values.push(
                 item.session_id, item.item_id, item.requested_qty, item.indent_remarks || null, 
-                item.snapshot_max_qty || 0, item.snapshot_balance || 0,
-                item.batch_no_1 || null, item.exp_date_1 || null, item.short_qty_1 || 0,
-                item.batch_no_2 || null, item.exp_date_2 || null, item.short_qty_2 || 0
+                item.snapshot_max_qty || 0, item.snapshot_balance || 0
             );
         });
 
         const query = `
             INSERT INTO indent_items (
-                session_id, item_id, requested_qty, indent_remarks, snapshot_max_qty, snapshot_balance,
-                batch_no_1, exp_date_1, short_qty_1, batch_no_2, exp_date_2, short_qty_2
+                session_id, item_id, requested_qty, indent_remarks, snapshot_max_qty, snapshot_balance
             ) VALUES ${placeholders.join(', ')}
         `;
 
@@ -101,12 +92,10 @@ router.post('/', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
             `INSERT INTO indent_items (
-                session_id, item_id, requested_qty, indent_remarks, snapshot_max_qty, snapshot_balance,
-                batch_no_1, exp_date_1, short_qty_1, batch_no_2, exp_date_2, short_qty_2
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+                session_id, item_id, requested_qty, indent_remarks, snapshot_max_qty, snapshot_balance
+            ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
             [
-                data.session_id, data.item_id, data.requested_qty, data.indent_remarks, data.snapshot_max_qty, data.snapshot_balance,
-                data.batch_no_1, data.exp_date_1, data.short_qty_1, data.batch_no_2, data.exp_date_2, data.short_qty_2
+                data.session_id, data.item_id, data.requested_qty, data.indent_remarks, data.snapshot_max_qty, data.snapshot_balance
             ]
         );
         res.status(201).json(result.rows[0]);
@@ -124,17 +113,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
                 requested_qty = COALESCE($1, requested_qty),
                 indent_remarks = COALESCE($2, indent_remarks),
                 snapshot_max_qty = COALESCE($3, snapshot_max_qty),
-                snapshot_balance = COALESCE($4, snapshot_balance),
-                batch_no_1 = $5,
-                exp_date_1 = $6,
-                short_qty_1 = $7,
-                batch_no_2 = $8,
-                exp_date_2 = $9,
-                short_qty_2 = $10
-            WHERE id = $11 RETURNING *`,
+                snapshot_balance = COALESCE($4, snapshot_balance)
+            WHERE id = $5 RETURNING *`,
             [
                 data.requested_qty, data.indent_remarks, data.snapshot_max_qty, data.snapshot_balance,
-                data.batch_no_1, data.exp_date_1, data.short_qty_1, data.batch_no_2, data.exp_date_2, data.short_qty_2,
                 req.params.id
             ]
         );

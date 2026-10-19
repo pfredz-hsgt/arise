@@ -11,13 +11,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_change_in_productio
 
 // Register a new user
 router.post('/register', async (req, res) => {
-    const { email, password, role, name } = req.body;
+    const { email, password, role, name, main_unit } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const encryptedPhisPassword = req.body.phis_password ? encrypt(req.body.phis_password) : null;
         const result = await pool.query(
-            'INSERT INTO users (email, password_hash, role, name, phis_username, phis_password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, role, name, phis_username, phis_password',
-            [email, hashedPassword, role || 'Indenter', name, req.body.phis_username || null, encryptedPhisPassword]
+            'INSERT INTO users (email, password_hash, role, name, phis_username, phis_password, main_unit) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, email, role, name, phis_username, phis_password, main_unit',
+            [email, hashedPassword, role || 'Indenter', name, req.body.phis_username || null, encryptedPhisPassword, main_unit || 'OPD']
         );
         const user = result.rows[0];
         if (user && user.phis_password) {
@@ -82,7 +82,7 @@ router.post('/login', async (req, res) => {
         const requiresPasswordChange = usedTempPassword || user.must_change_password;
 
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role, name: user.name, requiresPasswordChange },
+            { id: user.id, email: user.email, role: user.role, name: user.name, main_unit: user.main_unit, requiresPasswordChange },
             JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRE || '6h' }
         );
@@ -92,7 +92,7 @@ router.post('/login', async (req, res) => {
             [user.id, 'LOGIN_SUCCESS', JSON.stringify({ email, message: 'User logged in successfully' })]
         );
 
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name }, requiresPasswordChange });
+        res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name, main_unit: user.main_unit }, requiresPasswordChange });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -197,7 +197,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 // Get current user profile
 router.get('/me', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, email, role, name, phis_username, phis_password, created_at, must_change_password, is_active FROM users WHERE id = $1', [req.user.id]);
+        const result = await pool.query('SELECT id, email, role, name, phis_username, phis_password, main_unit, created_at, must_change_password, is_active FROM users WHERE id = $1', [req.user.id]);
         const user = result.rows[0];
         if (user && user.phis_password) {
             user.phis_password = decrypt(user.phis_password);
@@ -212,7 +212,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 router.get('/users', authenticateToken, async (req, res) => {
     // Should check req.user.role === 'Issuer' ideally
     try {
-        const result = await pool.query('SELECT id, email, name, role, phis_username, phis_password, is_active FROM users ORDER BY name ASC');
+        const result = await pool.query('SELECT id, email, name, role, phis_username, phis_password, main_unit, is_active FROM users ORDER BY name ASC');
         const users = result.rows.map(u => ({
             ...u,
             phis_password: u.phis_password ? decrypt(u.phis_password) : u.phis_password
@@ -224,12 +224,12 @@ router.get('/users', authenticateToken, async (req, res) => {
 });
 
 router.put('/users/:id', authenticateToken, async (req, res) => {
-    const { name, email, role, phis_username, phis_password, is_active } = req.body;
+    const { name, email, role, phis_username, phis_password, is_active, main_unit } = req.body;
     try {
         const encryptedPhisPassword = phis_password ? encrypt(phis_password) : (phis_password === '' ? '' : null);
         const result = await pool.query(
-            'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email), role = COALESCE($3, role), phis_username = COALESCE($4, phis_username), phis_password = COALESCE($5, phis_password), is_active = COALESCE($6, is_active) WHERE id = $7 RETURNING id, email, name, role, phis_username, phis_password, is_active',
-            [name, email, role, phis_username, encryptedPhisPassword, is_active, req.params.id]
+            'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email), role = COALESCE($3, role), phis_username = COALESCE($4, phis_username), phis_password = COALESCE($5, phis_password), is_active = COALESCE($6, is_active), main_unit = COALESCE($7, main_unit) WHERE id = $8 RETURNING id, email, name, role, phis_username, phis_password, main_unit, is_active',
+            [name, email, role, phis_username, encryptedPhisPassword, is_active, main_unit, req.params.id]
         );
         const user = result.rows[0];
         if (user && user.phis_password) {

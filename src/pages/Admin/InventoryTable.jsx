@@ -10,6 +10,7 @@ import {
     Space,
     message,
     Popconfirm,
+    Tag,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
@@ -22,6 +23,7 @@ const InventoryTable = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [editingDrug, setEditingDrug] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [mainUnits, setMainUnits] = useState([]);
     const [indentSources, setIndentSources] = useState([]);
     const [itemTypes, setItemTypes] = useState([]);
     const [purchaseTypes, setPurchaseTypes] = useState([]);
@@ -36,12 +38,14 @@ const InventoryTable = () => {
 
     const fetchLookupValues = async () => {
         try {
-            const [sourcesData, typesData, pTypesData, stdKtsData] = await Promise.all([
+            const [unitsData, sourcesData, typesData, pTypesData, stdKtsData] = await Promise.all([
+                api.get('/lookups/units'),
                 api.get('/lookups/sources'),
                 api.get('/lookups/types'),
                 api.get('/lookups/purchasetypes'),
                 api.get('/lookups/stdkts')
             ]);
+            setMainUnits(unitsData || []);
             setIndentSources(sourcesData || []);
             setItemTypes(typesData || []);
             setPurchaseTypes(pTypesData || []);
@@ -72,12 +76,16 @@ const InventoryTable = () => {
     const handleAdd = () => {
         setEditingDrug(null);
         form.resetFields();
+        form.setFieldsValue({ main_unit: 'OPD', convert_sku: 1 });
         setModalVisible(true);
     };
 
     const handleEdit = (drug) => {
         setEditingDrug(drug);
-        form.setFieldsValue(drug);
+        form.setFieldsValue({
+            ...drug,
+            main_unit: drug.main_unit || 'OPD'
+        });
         setModalVisible(true);
     };
 
@@ -125,6 +133,18 @@ const InventoryTable = () => {
             width: 200,
         },
         {
+            title: 'Main Unit',
+            dataIndex: 'main_unit',
+            key: 'main_unit',
+            filters: mainUnits.map(u => ({ text: u.name, value: u.name })),
+            onFilter: (value, record) => record.main_unit === value,
+            render: (unit) => {
+                const uObj = mainUnits.find(u => u.name === unit);
+                return <Tag color={uObj?.color || 'blue'}>{unit || 'OPD'}</Tag>;
+            },
+            width: 100,
+        },
+        {
             title: 'Item Code',
             dataIndex: 'item_code',
             key: 'item_code',
@@ -148,7 +168,7 @@ const InventoryTable = () => {
             key: 'puchase_type',
             filters: purchaseTypes.map(p => ({ text: p.name, value: p.name })),
             onFilter: (value, record) => record.puchase_type === value,
-            width: 100,
+            width: 110,
         },
         {
             title: 'STD/KT',
@@ -175,7 +195,24 @@ const InventoryTable = () => {
                 { text: 'J', value: 'J' },
             ],
             onFilter: (value, record) => record.row === value,
+            width: 70,
+        },
+        {
+            title: 'Tingkat',
+            dataIndex: 'tingkat',
+            key: 'tingkat',
+            sorter: (a, b) => (a.tingkat || 0) - (b.tingkat || 0),
             width: 80,
+            align: 'center',
+            render: (val) => val ?? '-'
+        },
+        {
+            title: 'Petak',
+            dataIndex: 'petak',
+            key: 'petak',
+            width: 80,
+            align: 'center',
+            render: (val) => val || '-'
         },
         {
             title: 'Max Qty',
@@ -247,7 +284,10 @@ const InventoryTable = () => {
             drug.name?.toLowerCase().includes(query) ||
             drug.item_code?.toLowerCase().includes(query) ||
             drug.pku?.toLowerCase().includes(query) ||
+            drug.main_unit?.toLowerCase().includes(query) ||
             drug.row?.toLowerCase().includes(query) ||
+            drug.petak?.toLowerCase().includes(query) ||
+            (drug.tingkat !== null && drug.tingkat !== undefined && String(drug.tingkat).includes(query)) ||
             drug.remarks?.toLowerCase().includes(query)
         );
     });
@@ -296,7 +336,7 @@ const InventoryTable = () => {
                 showSorterTooltip={false}
                 rowKey="id"
                 loading={loading}
-                scroll={{ x: 1200 }}
+                scroll={{ x: 1400 }}
                 onRow={(record) => ({
                     onClick: () => handleEdit(record),
                     style: { cursor: 'pointer' },
@@ -313,7 +353,7 @@ const InventoryTable = () => {
                 open={modalVisible}
                 onCancel={() => setModalVisible(false)}
                 onOk={() => form.submit()}
-                width={600}
+                width={650}
             >
                 <Form
                     form={form}
@@ -330,24 +370,38 @@ const InventoryTable = () => {
 
                     <Space style={{ width: '100%' }} size="large">
                         <Form.Item
+                            name="main_unit"
+                            label="Main Unit"
+                            rules={[{ required: true, message: 'Please select main unit' }]}
+                        >
+                            <Select placeholder="Select unit" style={{ width: 130 }}>
+                                {mainUnits.map(u => (
+                                    <Select.Option key={u.name} value={u.name}>
+                                        <Tag color={u.color}>{u.name}</Tag>
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+
+                        <Form.Item
                             name="item_code"
                             label="Item Code"
                         >
-                            <Input placeholder="e.g., ITEM001" style={{ width: 150 }} />
+                            <Input placeholder="e.g., ITEM001" style={{ width: 130 }} />
                         </Form.Item>
 
                         <Form.Item
                             name="pku"
                             label="PKU"
                         >
-                            <Input placeholder="e.g., PKU001" style={{ width: 150 }} />
+                            <Input placeholder="e.g., PKU001" style={{ width: 130 }} />
                         </Form.Item>
 
                         <Form.Item
                             name="convert_sku"
                             label="Convert SKU"
                         >
-                            <InputNumber placeholder="1" style={{ width: 100 }} min={1} inputMode="numeric" />
+                            <InputNumber placeholder="1" style={{ width: 90 }} min={1} inputMode="numeric" />
                         </Form.Item>
                     </Space>
 
@@ -380,15 +434,29 @@ const InventoryTable = () => {
                             name="row"
                             label="Row"
                         >
-                            <Input placeholder="e.g., A1" style={{ width: 120 }} />
+                            <Input placeholder="e.g., A" style={{ width: 80 }} />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="tingkat"
+                            label="Tingkat"
+                        >
+                            <InputNumber placeholder="1" style={{ width: 80 }} min={0} inputMode="numeric" />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="petak"
+                            label="Petak"
+                        >
+                            <Input placeholder="e.g., 2" style={{ width: 80 }} />
                         </Form.Item>
 
                         <Form.Item name="max_qty" label="Max Quantity">
-                            <InputNumber placeholder="Max Qty" style={{ width: 120 }} min={0} inputMode="numeric" />
+                            <InputNumber placeholder="Max Qty" style={{ width: 110 }} min={0} inputMode="numeric" />
                         </Form.Item>
 
                         <Form.Item name="balance" label="Balance">
-                            <InputNumber placeholder="Balance" style={{ width: 120 }} min={0} inputMode="numeric" />
+                            <InputNumber placeholder="Balance" style={{ width: 110 }} min={0} inputMode="numeric" />
                         </Form.Item>
                     </Space>
 

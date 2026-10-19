@@ -91,6 +91,7 @@ const AdminMenuPage = () => {
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
+    const [units, setUnits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -101,7 +102,17 @@ const UserManagement = () => {
 
     useEffect(() => {
         fetchUsers();
+        fetchUnits();
     }, []);
+
+    const fetchUnits = async () => {
+        try {
+            const data = await api.get('/lookups/units');
+            setUnits(data || []);
+        } catch (error) {
+            console.error('Failed to fetch units:', error);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -124,6 +135,7 @@ const UserManagement = () => {
                 password: 'F@rmasi.1234',
                 name: values.name,
                 role: values.role,
+                main_unit: values.main_unit || 'OPD',
                 phis_username: values.phis_username,
                 phis_password: values.phis_password
             });
@@ -152,6 +164,7 @@ const UserManagement = () => {
                 name: values.name,
                 email: values.email,
                 role: values.role,
+                main_unit: values.main_unit || 'OPD',
                 phis_username: values.phis_username,
                 phis_password: values.phis_password,
                 is_active: values.is_active
@@ -194,6 +207,17 @@ const UserManagement = () => {
     const columns = [
         { title: 'Name', dataIndex: 'name', key: 'name' },
         { title: 'Email', dataIndex: 'email', key: 'email' },
+        { 
+            title: 'Main Unit', 
+            dataIndex: 'main_unit', 
+            key: 'main_unit', 
+            filters: units.map(u => ({ text: u.name, value: u.name })),
+            onFilter: (value, record) => record.main_unit === value,
+            render: (unit) => {
+                const unitObj = units.find(u => u.name === unit);
+                return <Tag color={unitObj?.color || 'blue'}>{unit || 'OPD'}</Tag>;
+            }
+        },
         { title: 'Role', dataIndex: 'role', key: 'role', render: text => <Tag color={text === 'Issuer' ? 'blue' : 'green'}>{text}</Tag> },
         { title: 'Status', dataIndex: 'is_active', key: 'is_active', render: (isActive) => <Tag color={isActive === false ? 'error' : 'success'}>{isActive === false ? 'Inactive' : 'Active'}</Tag> }
     ];
@@ -219,6 +243,7 @@ const UserManagement = () => {
                             name: record.name,
                             email: record.email,
                             role: record.role,
+                            main_unit: record.main_unit || 'OPD',
                             phis_username: record.phis_username,
                             phis_password: record.phis_password,
                             is_active: record.is_active !== false
@@ -235,7 +260,7 @@ const UserManagement = () => {
                 onCancel={() => { setIsModalVisible(false); form.resetFields(); }}
                 footer={null}
             >
-                <Form layout="vertical" form={form} onFinish={handleCreateUser}>
+                <Form layout="vertical" form={form} onFinish={handleCreateUser} initialValues={{ role: 'Indenter', main_unit: 'OPD' }}>
                     <Form.Item name="name" label="Name" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
@@ -243,12 +268,27 @@ const UserManagement = () => {
                         <Input />
                     </Form.Item>
 
-                    <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-                        <Select>
-                            <Option value="Indenter">Indenter</Option>
-                            <Option value="Issuer">Issuer (Admin)</Option>
-                        </Select>
-                    </Form.Item>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+                                <Select>
+                                    <Option value="Indenter">Indenter</Option>
+                                    <Option value="Issuer">Issuer (Admin)</Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="main_unit" label="Main Unit" rules={[{ required: true, message: 'Please select a main unit' }]}>
+                                <Select placeholder="Select unit">
+                                    {units.map(u => (
+                                        <Option key={u.name} value={u.name}>
+                                            <Tag color={u.color}>{u.name}</Tag>
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Collapse ghost style={{ marginBottom: 24 }}>
                         <Collapse.Panel header="PHIS Credentials (Optional)" key="1">
                             <Form.Item name="phis_username" label="PHIS Username">
@@ -283,12 +323,27 @@ const UserManagement = () => {
                     <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-                        <Select>
-                            <Option value="Indenter">Indenter</Option>
-                            <Option value="Issuer">Issuer (Admin)</Option>
-                        </Select>
-                    </Form.Item>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+                                <Select>
+                                    <Option value="Indenter">Indenter</Option>
+                                    <Option value="Issuer">Issuer (Admin)</Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="main_unit" label="Main Unit" rules={[{ required: true, message: 'Please select a main unit' }]}>
+                                <Select placeholder="Select unit">
+                                    {units.map(u => (
+                                        <Option key={u.name} value={u.name}>
+                                            <Tag color={u.color}>{u.name}</Tag>
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Form.Item name="is_active" label="Active Status" valuePropName="checked">
                         <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
                     </Form.Item>
@@ -574,6 +629,7 @@ const LookupManager = ({ title, endpoint, data, onRefresh }) => {
 };
 
 const SystemValuesTab = () => {
+    const [units, setUnits] = useState([]);
     const [sources, setSources] = useState([]);
     const [types, setTypes] = useState([]);
     const [purchaseTypes, setPurchaseTypes] = useState([]);
@@ -587,12 +643,14 @@ const SystemValuesTab = () => {
     const fetchValues = async () => {
         setLoading(true);
         try {
-            const [sourcesData, typesData, pTypesData, stdKtsData] = await Promise.all([
+            const [unitsData, sourcesData, typesData, pTypesData, stdKtsData] = await Promise.all([
+                api.get('/lookups/units'),
                 api.get('/lookups/sources'),
                 api.get('/lookups/types'),
                 api.get('/lookups/purchasetypes'),
                 api.get('/lookups/stdkts')
             ]);
+            setUnits(unitsData || []);
             setSources(sourcesData || []);
             setTypes(typesData || []);
             setPurchaseTypes(pTypesData || []);
@@ -609,16 +667,19 @@ const SystemValuesTab = () => {
 
     return (
         <Row gutter={[24, 24]} style={{ padding: '0 16px' }}>
-            <Col span={12}>
+            <Col xs={24} md={12} lg={8}>
+                <LookupManager title="Main Units" endpoint="/lookups/units" data={units} onRefresh={fetchValues} />
+            </Col>
+            <Col xs={24} md={12} lg={8}>
                 <LookupManager title="Indent Sources" endpoint="/lookups/sources" data={sources} onRefresh={fetchValues} />
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12} lg={8}>
                 <LookupManager title="Item Types" endpoint="/lookups/types" data={types} onRefresh={fetchValues} />
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12} lg={8}>
                 <LookupManager title="Purchase Types" endpoint="/lookups/purchasetypes" data={purchaseTypes} onRefresh={fetchValues} />
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12} lg={8}>
                 <LookupManager title="STD/KT" endpoint="/lookups/stdkts" data={stdKts} onRefresh={fetchValues} />
             </Col>
         </Row>

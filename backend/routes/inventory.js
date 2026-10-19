@@ -33,23 +33,33 @@ router.get('/raks', authenticateToken, async (req, res) => {
 // Get all inventory items
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const { indent_source, row, search } = req.query;
+        const { indent_source, row, search, main_unit } = req.query;
         let query = 'SELECT * FROM inventory_items';
         const params = [];
+        const conditions = [];
+
+        if (main_unit) {
+            params.push(main_unit);
+            conditions.push(`main_unit = $${params.length}`);
+        }
 
         if (indent_source) {
             params.push(indent_source);
-            query += ` WHERE indent_source = $${params.length}`;
+            conditions.push(`indent_source = $${params.length}`);
         }
         
         if (row) {
             params.push(row);
-            query += params.length === 1 ? ` WHERE row = $1` : ` AND row = $2`;
+            conditions.push(`row = $${params.length}`);
         }
 
         if (search) {
             params.push(`%${search}%`);
-            query += params.length === 1 ? ` WHERE name ILIKE $1` : ` AND name ILIKE $${params.length}`;
+            conditions.push(`name ILIKE $${params.length}`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
         }
 
         query += ' ORDER BY name ASC';
@@ -75,7 +85,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create a new item (Admin)
 router.post('/', authenticateToken, upload.single('image'), async (req, res) => {
     // Ideally check req.user.role === 'Issuer' here
-    const { name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type } = req.body;
+    const { name, item_code, pku, puchase_type, std_kt, row, tingkat, petak, main_unit, max_qty, balance, indent_source, remarks, type } = req.body;
     let image_url = req.body.image_url || null;
 
     if (req.file) {
@@ -85,10 +95,10 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
     try {
         const result = await pool.query(
             `INSERT INTO inventory_items (
-                name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, 
+                name, item_code, pku, puchase_type, std_kt, row, tingkat, petak, main_unit, max_qty, balance, 
                 indent_source, remarks, type, image_url
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-            [name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type, image_url]
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+            [name, item_code, pku, puchase_type, std_kt, row, tingkat ? parseInt(tingkat, 10) : null, petak, main_unit || 'OPD', max_qty, balance, indent_source, remarks, type, image_url]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -98,7 +108,7 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
 
 // Update an item (Admin)
 router.put('/:id', authenticateToken, upload.single('image'), async (req, res) => {
-    const { name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, indent_source, remarks, type } = req.body;
+    const { name, item_code, pku, puchase_type, std_kt, row, tingkat, petak, main_unit, max_qty, balance, indent_source, remarks, type } = req.body;
     let image_url = req.body.image_url;
 
     if (req.file) {
@@ -118,16 +128,19 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
                 puchase_type = COALESCE($4, puchase_type),
                 std_kt = COALESCE($5, std_kt),
                 row = COALESCE($6, row),
-                max_qty = COALESCE($7, max_qty),
-                balance = COALESCE($8, balance),
-                indent_source = COALESCE($9, indent_source),
-                remarks = COALESCE($10, remarks),
-                type = COALESCE($11, type),
-                image_url = COALESCE($12, image_url)
-            WHERE id = $13 RETURNING *
+                tingkat = COALESCE($7, tingkat),
+                petak = COALESCE($8, petak),
+                main_unit = COALESCE($9, main_unit),
+                max_qty = COALESCE($10, max_qty),
+                balance = COALESCE($11, balance),
+                indent_source = COALESCE($12, indent_source),
+                remarks = COALESCE($13, remarks),
+                type = COALESCE($14, type),
+                image_url = COALESCE($15, image_url)
+            WHERE id = $16 RETURNING *
         `;
         const result = await pool.query(updateQuery, [
-            name, item_code, pku, puchase_type, std_kt, row, max_qty, balance, 
+            name, item_code, pku, puchase_type, std_kt, row, tingkat !== undefined ? (tingkat ? parseInt(tingkat, 10) : null) : null, petak, main_unit, max_qty, balance, 
             indent_source, remarks, type, image_url, req.params.id
         ]);
         
@@ -136,7 +149,7 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
 
         // Audit Log Generation
         const changes = {};
-        const fieldsToCheck = ['name', 'item_code', 'pku', 'puchase_type', 'std_kt', 'row', 'max_qty', 'balance', 'indent_source', 'remarks', 'type'];
+        const fieldsToCheck = ['name', 'item_code', 'pku', 'puchase_type', 'std_kt', 'row', 'tingkat', 'petak', 'main_unit', 'max_qty', 'balance', 'indent_source', 'remarks', 'type'];
         let changeMessages = [];
 
         for (const field of fieldsToCheck) {

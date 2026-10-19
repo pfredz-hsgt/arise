@@ -4,6 +4,14 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Table: main_unit
+CREATE TABLE IF NOT EXISTS main_unit (
+  name TEXT PRIMARY KEY,
+  color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Table: users
 CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -13,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT DEFAULT 'Indenter' CHECK (role IN ('Issuer', 'Indenter')),
   phis_username TEXT,
   phis_password TEXT, -- Encrypted via AES-256-GCM
+  main_unit TEXT REFERENCES main_unit(name) ON UPDATE CASCADE ON DELETE SET NULL,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -60,7 +69,10 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   convert_sku INTEGER DEFAULT 1,
   puchase_type TEXT REFERENCES purchase_types(name) ON UPDATE CASCADE ON DELETE SET NULL,
   std_kt TEXT REFERENCES std_kts(name) ON UPDATE CASCADE ON DELETE SET NULL,
+  main_unit TEXT REFERENCES main_unit(name) ON UPDATE CASCADE ON DELETE SET NULL,
   row TEXT,
+  tingkat INTEGER,
+  petak TEXT,
   max_qty INTEGER,
   balance INTEGER,
   indent_source TEXT REFERENCES indent_sources(name) ON UPDATE CASCADE ON DELETE SET NULL,
@@ -84,7 +96,7 @@ CREATE TABLE IF NOT EXISTS indent_sessions (
 );
 
 -- Table: indent_items
--- (Stores Routine Indent Items & Short Expiry)
+-- (Stores Routine Indent Items)
 CREATE TABLE IF NOT EXISTS indent_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   session_id UUID REFERENCES indent_sessions(id) ON DELETE CASCADE,
@@ -93,12 +105,6 @@ CREATE TABLE IF NOT EXISTS indent_items (
   indent_remarks TEXT,
   snapshot_max_qty INTEGER,
   snapshot_balance INTEGER,
-  batch_no_1 TEXT,
-  exp_date_1 DATE,
-  short_qty_1 INTEGER,
-  batch_no_2 TEXT,
-  exp_date_2 DATE,
-  short_qty_2 INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -121,6 +127,8 @@ CREATE TABLE IF NOT EXISTS indent_requests (
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_inventory_items_name ON inventory_items(name);
 CREATE INDEX IF NOT EXISTS idx_inventory_items_indent_source ON inventory_items(indent_source);
+CREATE INDEX IF NOT EXISTS idx_inventory_items_main_unit ON inventory_items(main_unit);
+CREATE INDEX IF NOT EXISTS idx_users_main_unit ON users(main_unit);
 CREATE INDEX IF NOT EXISTS idx_indent_requests_status ON indent_requests(status);
 CREATE INDEX IF NOT EXISTS idx_indent_requests_item_id ON indent_requests(item_id);
 
@@ -134,6 +142,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Triggers to auto-update updated_at
+CREATE TRIGGER update_main_unit_updated_at
+  BEFORE UPDATE ON main_unit
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_inventory_items_updated_at
   BEFORE UPDATE ON inventory_items
   FOR EACH ROW
@@ -208,3 +221,11 @@ CREATE TABLE IF NOT EXISTS kewps6_archive (
     archived_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     archived_by VARCHAR(255)
 );
+
+-- Initial Seed: main_unit (OPD, IPD, ED)
+INSERT INTO main_unit (name, color) VALUES
+  ('OPD', 'blue'),
+  ('IPD', 'green'),
+  ('ED', 'volcano')
+ON CONFLICT (name) DO NOTHING;
+

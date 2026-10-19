@@ -77,5 +77,6 @@ generateRoutes('indent_sources', '/sources');
 generateRoutes('item_types', '/types');
 generateRoutes('purchase_types', '/purchasetypes');
 generateRoutes('std_kts', '/stdkts');
+generateRoutes('main_unit', '/units');
 
 export default router;

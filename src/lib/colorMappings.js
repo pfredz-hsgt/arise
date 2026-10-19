@@ -4,22 +4,25 @@ let sourceColors = {};
 let purchaseTypeColors = {};
 let stdKtColors = {};
 let itemTypeColors = {};
+let unitColors = {};
 let isInitialized = false;
 
 export const initColors = async () => {
     if (isInitialized) return;
     try {
-        const [sources, pTypes, stdKts, types] = await Promise.all([
+        const [sources, pTypes, stdKts, types, units] = await Promise.all([
             api.get('/lookups/sources'),
             api.get('/lookups/purchasetypes'),
             api.get('/lookups/stdkts'),
-            api.get('/lookups/types')
+            api.get('/lookups/types'),
+            api.get('/lookups/units')
         ]);
         
         sources.forEach(s => sourceColors[s.name] = s.color);
         pTypes.forEach(p => purchaseTypeColors[p.name] = p.color);
         stdKts.forEach(sk => stdKtColors[sk.name] = sk.color);
         types.forEach(t => itemTypeColors[t.name] = t.color);
+        units.forEach(u => unitColors[u.name] = u.color);
         
         isInitialized = true;
     } catch (error) {
@@ -41,4 +44,8 @@ export const getStdKtColor = (type) => {
 
 export const getTypeColor = (type) => {
     return itemTypeColors[type] || 'default';
+};
+
+export const getUnitColor = (unit) => {
+    return unitColors[unit] || 'default';
 };
