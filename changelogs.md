@@ -3,28 +3,88 @@
 
 ### Summary of Changes v1.1.4
 
+The text and elements in the `TabBar` inside [`MainLayout.jsx`](/arise/src/components/Layout/MainLayout.jsx) have been made non-selectable with touch callouts disabled.
 
-1. **Coordinator: [`LoginPage.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginPage.jsx)**:
+### Changes Implemented:
+
+1. **Inline Prevention on `mobile-tabbar-container` and `TabBar.Item` title**:
+   - Added `userSelect: 'none'`, `WebkitUserSelect: 'none'`, `WebkitTouchCallout: 'none'`, and `WebkitTapHighlightColor: 'transparent'` to the TabBar container at [`MainLayout.jsx:L404-L408`](/arise/src/components/Layout/MainLayout.jsx#L404-L408).
+   - Wrapped the item `title` in a `<span>` with explicit non-selectable inline styling at [`MainLayout.jsx:L416-L423`](/arise/src/components/Layout/MainLayout.jsx#L416-L423).
+
+2. **Global CSS Rule in Layout `<style>`**:
+   - Added rules targeting `.mobile-tabbar-container` and all child elements (`.mobile-tabbar-container *`) at [`MainLayout.jsx:L525-L534`](/arise/src/components/Layout/MainLayout.jsx#L525-L534):
+     ```css
+     .mobile-tabbar-container,
+     .mobile-tabbar-container * {
+       -webkit-touch-callout: none !important;
+       -webkit-user-select: none !important;
+       -khtml-user-select: none !important;
+       -moz-user-select: none !important;
+       -ms-user-select: none !important;
+       user-select: none !important;
+       -webkit-tap-highlight-color: transparent !important;
+     }
+     ```
+
+This suppresses iOS Safari callout balloons (Look Up, Copy, Share, Search Web) and Android text selection handles when long-pressing or tapping tab bar items.
+
+The non-selectable and touch-callout prevention fix has been applied across all mobile pages and interactive touchable controls.
+
+### Implementation Details:
+
+1. **Global Stylesheet Hardening in [`src/style.css`](/arise/src/style.css#L46-L147)**:
+   Added comprehensive mobile rules loaded globally across all routes:
+   - **All Buttons & Controls**: Targeted `button`, `[role="button"]`, `.ant-btn`, `.adm-button`, and their descendants with:
+     ```css
+     -webkit-touch-callout: none !important;
+     -webkit-user-select: none !important;
+     -khtml-user-select: none !important;
+     -moz-user-select: none !important;
+     -ms-user-select: none !important;
+     user-select: none !important;
+     -webkit-tap-highlight-color: transparent !important;
+     ```
+   - **Mobile UI Elements**: Covers Ant Design Mobile navigation bars ([`.adm-nav-bar`](/arise/src/style.css#L68)), TabBars ([`.adm-tab-bar`](/arise/src/style.css#L64)), Capsule Tabs ([`.adm-capsule-tabs`](/arise/src/style.css#L72)), Segmented controls, Tags, Checkboxes, Dialog buttons, and Dropdowns.
+   - **Tap Targets on Mobile Viewports (`@media (max-width: 767.98px)`)**: Elements styled with `cursor: pointer` (filter pills, quick chips, interactive cards, steppers) are automatically non-selectable and callout-free.
+   - **Form Input Protection**: Explicitly preserved native cursor positioning and text selection for `input`, `textarea`, `.adm-input-element`, and `.ant-input`.
+
+2. **Inline Hardening on Custom Floating Controls**:
+   - Added `userSelect: 'none'`, `WebkitUserSelect: 'none'`, and `WebkitTouchCallout: 'none'` to the floating `+` entry button in [`ShortExpMobileView.jsx:L612-L614`](/arise/src/pages/Shortexp/ShortExpMobileView.jsx#L612-L614).
+
+### Mobile Pages Protected:
+- **[`HomeMobileView.jsx`](/arise/src/pages/Home/HomeMobileView.jsx)**: Shelf selector triggers, routine/urgent/short-exp cards, quick shelf audit chips, and drawer action buttons.
+- **[`ShortExpMobileView.jsx`](/arise/src/pages/Shortexp/ShortExpMobileView.jsx)**: Filter pills (All, Critical, Upcoming), search clear button, pagination, archive/export buttons, and floating `+` button.
+- **[`ShortExpEntryMobileView.jsx`](/arise/src/pages/Shortexp/ShortExpEntryMobileView.jsx)**: Batch tabs, date picker trigger, quantity steppers, and navigation action bar.
+- **[`ShortExpArchiveMobileView.jsx`](/arise/src/pages/Shortexp/ShortExpArchiveMobileView.jsx)**: Pagination, filter pills, and Excel export.
+- **[`RoutineIndentMobileView.jsx`](/arise/src/pages/Indent/RoutineIndentMobileView.jsx)**: NIL (0) / MAX quick balance buttons, `-` / `+` steppers, expandable remarks trigger, and previous/next buttons.
+- **[`RoutineSummaryMobileView.jsx`](/arise/src/pages/Indent/RoutineSummaryMobileView.jsx)**: Resume button, medicine edit cards, edit popup steppers, and fixed bottom "Confirm and Send" button.
+- **[`IndentMobileView.jsx`](/arise/src/pages/Indent/IndentMobileView.jsx)**: Row/Source filter buttons, clear filters, add/update item buttons, and bottom cart floating bar.
+- **[`CartMobileView.jsx`](/arise/src/pages/Cart/CartMobileView.jsx)** & **[`IndentRecordMobileView.jsx`](/arise/src/pages/Cart/IndentRecordMobileView.jsx)**: Header navigation, user and date preset pills, order action cards, PDF/Excel buttons, and stepper controls.
+- **[`LoginMobileView.jsx`](/arise/src/pages/Auth/LoginMobileView.jsx)**: "Sign In" button, "Forgot Password?" trigger, and reset modal buttons.
+- **[`AdminMenuMobileView.jsx`](/arise/src/pages/Admin/AdminMenuMobileView.jsx)**: Header back arrow, capsule tabs, and action buttons.
+
+
+1. **Coordinator: [`LoginPage.jsx`](/arise/src/pages/Auth/LoginPage.jsx)**:
    - Refactored into a thin coordinator detecting `useIsMobile(768)`.
-   - Delegates state management to `useLoginPage` and renders [`LoginMobileView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginMobileView.jsx) on mobile or [`LoginDesktopView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginDesktopView.jsx) on desktop.
+   - Delegates state management to `useLoginPage` and renders [`LoginMobileView.jsx`](/arise/src/pages/Auth/LoginMobileView.jsx) on mobile or [`LoginDesktopView.jsx`](/arise/src/pages/Auth/LoginDesktopView.jsx) on desktop.
 
-2. **Headless Logic: [`useLoginPage.js`](file:///d:/dev/arise/src/pages/Auth/useLoginPage.js)**:
+2. **Headless Logic: [`useLoginPage.js`](/arise/src/pages/Auth/useLoginPage.js)**:
    - Houses login submission, recovery link dispatching, error feedback, modal/loading state, and routing logic shared across both viewports.
 
-3. **Desktop View: [`LoginDesktopView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginDesktopView.jsx)**:
+3. **Desktop View: [`LoginDesktopView.jsx`](/arise/src/pages/Auth/LoginDesktopView.jsx)**:
    - Preserves the existing desktop glassmorphism design with radial gradients and desktop modal.
 
-4. **Touch-First Mobile View: [`LoginMobileView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginMobileView.jsx)**:
+4. **Touch-First Mobile View: [`LoginMobileView.jsx`](/arise/src/pages/Auth/LoginMobileView.jsx)**:
    - **Hero Header**: Features the hospital pharmacy blue gradient (`#001529` to `#00457c`) with subtle ambient glow, drop-shadowed ARISE logo, signature metallic gradient branding, and Segamat hospital badge.
    - **Mobile Form Card**: Floating card with rounded corners (`22px`), comfortable touch inputs with prefix icons (email, password), and primary gradient Sign In button (`48px` touch target) with loading spinner.
    - **Mobile Forgot Password Drawer (`Popup`)**: Replaces the desktop dialog with an `antd-mobile` slide-up bottom sheet drawer with grab indicator, recovery instruction card, email input, and full-width reset trigger.
    - **Device Integration**: Uses `<SafeArea position="top" />` and `<SafeArea position="bottom" />` for safe display on modern phone screens with notches and home indicators.
 
-Added the **Edit Profile** menu option and mobile slide-up drawer to [`HomeMobileView.jsx`](file:///d:/dev/arise/src/pages/Home/HomeMobileView.jsx):
+Added the **Edit Profile** menu option and mobile slide-up drawer to [`HomeMobileView.jsx`](/arise/src/pages/Home/HomeMobileView.jsx):
 
 ### Implementation Details
 
-1. **Updated `userMenu` in [`HomeMobileView.jsx`](file:///d:/dev/arise/src/pages/Home/HomeMobileView.jsx)**:
+1. **Updated `userMenu` in [`HomeMobileView.jsx`](/arise/src/pages/Home/HomeMobileView.jsx)**:
    - Added `Edit Profile` with `<UserOutlined />` icon.
    - Clicking triggers `openEditProfile()`, pre-populating current user data into the form and opening the drawer.
 
@@ -36,7 +96,7 @@ Added the **Edit Profile** menu option and mobile slide-up drawer to [`HomeMobil
    - **Sticky Bottom Action Bar**: Sticky footer with **Cancel** and primary **Save Changes** buttons, including safe area padding and loading state.
    - **Full State Integration**: Uses `updateProfile` and `changePassword` from `useAuth()` matching the desktop edit profile logic.
 
-The **Entry** button on [`ShortExpMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpMobileView.jsx) has been converted to a floating `+` action button:
+The **Entry** button on [`ShortExpMobileView.jsx`](/arise/src/pages/Shortexp/ShortExpMobileView.jsx) has been converted to a floating `+` action button:
 
 ### Changes Made
 
@@ -50,7 +110,7 @@ The **Entry** button on [`ShortExpMobileView.jsx`](file:///d:/dev/arise/src/page
 
 
 
-1. **Persistent Mobile TabBar in [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx)**:
+1. **Persistent Mobile TabBar in [`MainLayout.jsx`](/arise/src/components/Layout/MainLayout.jsx)**:
    - Integrated the Ant Design Mobile `TabBar` persistently at the bottom of `MainLayout` when on mobile viewports (`isMobile`).
    - Automatic route-aware tab activation via `getActiveMobileTab(location.pathname)`:
      - **Home** (`/home`)
@@ -65,134 +125,134 @@ The **Entry** button on [`ShortExpMobileView.jsx`](file:///d:/dev/arise/src/page
    - Conditioned `<Header className="site-header">` to render only on non-mobile screens (`!isMobile`).
    - Conditioned the drawer navigation (`<Drawer className="mobile-drawer">`) and desktop sidebar (`<Sider>`) to stay hidden on mobile.
    - Set layout margin to `marginLeft: 0` on mobile, removing the desktop sidebar offset and 64px header margin.
-   - Updated responsive CSS in both [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx) and [`style.css`](file:///d:/dev/arise/src/style.css) so `.site-content` renders edge-to-edge with no clipping or gaps.
+   - Updated responsive CSS in both [`MainLayout.jsx`](/arise/src/components/Layout/MainLayout.jsx) and [`style.css`](/arise/src/style.css) so `.site-content` renders edge-to-edge with no clipping or gaps.
 
-3. **Removed Redundant TabBar from [`HomeMobileView.jsx`](file:///d:/dev/arise/src/pages/Home/HomeMobileView.jsx)**:
+3. **Removed Redundant TabBar from [`HomeMobileView.jsx`](/arise/src/pages/Home/HomeMobileView.jsx)**:
    - Removed the local fixed `TabBar` and `onTabChange` handler from `HomeMobileView.jsx`.
    - Added a compact user avatar dropdown (Profile info & Sign Out) in the top department greeting banner beside the unit badge so mobile users can manage their profile and sign out without needing the desktop header.
 
 4. **Coordinated Floating Bottom Action Bars**:
-   - Adjusted sticky/floating action bars in [`RoutineSummaryMobileView.jsx`](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryMobileView.jsx), [`RoutineIndentMobileView.jsx`](file:///d:/dev/arise/src/pages/Indent/RoutineIndentMobileView.jsx), [`IndentMobileView.jsx`](file:///d:/dev/arise/src/pages/Indent/IndentMobileView.jsx), [`ShortExpMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpMobileView.jsx), [`ShortExpEntryMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntryMobileView.jsx), [`ShortExpArchiveMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchiveMobileView.jsx), and [`IndentRecordMobileView.jsx`](file:///d:/dev/arise/src/pages/Cart/IndentRecordMobileView.jsx) to sit at `bottom: 50` with bottom padding clearance so they dock neatly above the persistent `TabBar`.
+   - Adjusted sticky/floating action bars in [`RoutineSummaryMobileView.jsx`](/arise/src/pages/Indent/RoutineSummaryMobileView.jsx), [`RoutineIndentMobileView.jsx`](/arise/src/pages/Indent/RoutineIndentMobileView.jsx), [`IndentMobileView.jsx`](/arise/src/pages/Indent/IndentMobileView.jsx), [`ShortExpMobileView.jsx`](/arise/src/pages/Shortexp/ShortExpMobileView.jsx), [`ShortExpEntryMobileView.jsx`](/arise/src/pages/Shortexp/ShortExpEntryMobileView.jsx), [`ShortExpArchiveMobileView.jsx`](/arise/src/pages/Shortexp/ShortExpArchiveMobileView.jsx), and [`IndentRecordMobileView.jsx`](/arise/src/pages/Cart/IndentRecordMobileView.jsx) to sit at `bottom: 50` with bottom padding clearance so they dock neatly above the persistent `TabBar`.
 
 ### What Was Done v1.1.3
 
-#### Short Expiry Entry Mobile Adaptation: [ShortExpEntry.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntry.jsx)
+#### Short Expiry Entry Mobile Adaptation: [ShortExpEntry.jsx](/arise/src/pages/Shortexp/ShortExpEntry.jsx)
 Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
-1. **Shared Headless Logic ([useShortExpEntry.js](file:///d:/dev/arise/src/pages/Shortexp/useShortExpEntry.js))**:
+1. **Shared Headless Logic ([useShortExpEntry.js](/arise/src/pages/Shortexp/useShortExpEntry.js))**:
    - Manages Rak selection, inventory items iteration, batch saving, and instant drug search.
    - Pure JS implementation without raw JSX.
-2. **Desktop View ([ShortExpEntryDesktopView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntryDesktopView.jsx))**:
+2. **Desktop View ([ShortExpEntryDesktopView.jsx](/arise/src/pages/Shortexp/ShortExpEntryDesktopView.jsx))**:
    - 100% of the desktop wizard preserved for screens $\ge 768\text{px}$.
    - Card setup with Ant Design Select, Search & Edit Specific Drug Card, and `ShortExpTabs` editable card tabs.
-3. **Mobile Touch View ([ShortExpEntryMobileView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntryMobileView.jsx))**:
-   - **Setup View**: Sticky `NavBar` with unit badge, native `Picker` wheel for choosing Rak, and instant SearchBar with tap-to-edit drug cards opening [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx).
+3. **Mobile Touch View ([ShortExpEntryMobileView.jsx](/arise/src/pages/Shortexp/ShortExpEntryMobileView.jsx))**:
+   - **Setup View**: Sticky `NavBar` with unit badge, native `Picker` wheel for choosing Rak, and instant SearchBar with tap-to-edit drug cards opening [ShortExpModal.jsx](/arise/src/components/ShortExpModal.jsx).
    - **Active Recording View**: Sticky header with Rak tag and item counter, progress bar, current drug info card with PKU badge, and `MobileBatchEditor` (`CapsuleTabs`, `-` / `+` quantity steppers, `DatePicker` popup for expiry date, and optional remarks).
    - Sticky bottom navigation bar with `[ < Previous ]` and `[ Next Item > ]` / `[ Finish & Return ✓ ]`.
-4. **Thin Coordinator ([ShortExpEntry.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntry.jsx))**:
+4. **Thin Coordinator ([ShortExpEntry.jsx](/arise/src/pages/Shortexp/ShortExpEntry.jsx))**:
    - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
 
-#### Short Expiry Archive Mobile Adaptation: [ShortExpArchive.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchive.jsx)
+#### Short Expiry Archive Mobile Adaptation: [ShortExpArchive.jsx](/arise/src/pages/Shortexp/ShortExpArchive.jsx)
 Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
-1. **Shared Headless Logic ([useShortExpArchive.js](file:///d:/dev/arise/src/pages/Shortexp/useShortExpArchive.js))**:
+1. **Shared Headless Logic ([useShortExpArchive.js](/arise/src/pages/Shortexp/useShortExpArchive.js))**:
    - Manages archive dates fetching, date selection, archived drugs loading, item search, and Excel spreadsheet export (`xlsx`).
    - Pure JS implementation without raw JSX.
-2. **Desktop View ([ShortExpArchiveDesktopView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchiveDesktopView.jsx))**:
+2. **Desktop View ([ShortExpArchiveDesktopView.jsx](/arise/src/pages/Shortexp/ShortExpArchiveDesktopView.jsx))**:
    - 100% of the desktop Ant Design table experience preserved for screens $\ge 768\text{px}$.
    - Full table with 6M..1M monthly breakdown, Ant Design Select for dates, and Export Excel button.
-3. **Mobile Touch View ([ShortExpArchiveMobileView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchiveMobileView.jsx))**:
+3. **Mobile Touch View ([ShortExpArchiveMobileView.jsx](/arise/src/pages/Shortexp/ShortExpArchiveMobileView.jsx))**:
    - Sticky `NavBar` with unit badge and top Excel export trigger.
    - Touch date selector pill opening a native `Picker` wheel for archive dates.
    - Real-time `SearchBar` for drug name, batch no, or PKU.
    - Touch cards with batch badges, PKU tags, shelf row, total quantity, and archiver name.
    - Mobile stepper pagination and sticky bottom summary bar.
-4. **Thin Coordinator ([ShortExpArchive.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchive.jsx))**:
+4. **Thin Coordinator ([ShortExpArchive.jsx](/arise/src/pages/Shortexp/ShortExpArchive.jsx))**:
    - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
 
 
 
-#### Admin Menu Page Mobile Adaptation: [AdminMenu.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenu.jsx)
+#### Admin Menu Page Mobile Adaptation: [AdminMenu.jsx](/arise/src/pages/Admin/AdminMenu.jsx)
 Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
-1. **Shared Headless Logic ([useAdminMenu.js](file:///d:/dev/arise/src/pages/Admin/useAdminMenu.js))**:
+1. **Shared Headless Logic ([useAdminMenu.js](/arise/src/pages/Admin/useAdminMenu.js))**:
    - Manages tab navigation state and full database Excel export across Inventory and Indent records.
    - Zero raw JSX in hook to ensure clean compilation.
-2. **Desktop View ([AdminMenuDesktopView.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenuDesktopView.jsx))**:
+2. **Desktop View ([AdminMenuDesktopView.jsx](/arise/src/pages/Admin/AdminMenuDesktopView.jsx))**:
    - 100% of the desktop Ant Design tabs preserved for screens $\ge 768\text{px}$.
    - User Management table, Inventory settings, Audit logs table, dbdiagram iframe, and System Values cards.
-3. **Mobile Touch View ([AdminMenuMobileView.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenuMobileView.jsx))**:
+3. **Mobile Touch View ([AdminMenuMobileView.jsx](/arise/src/pages/Admin/AdminMenuMobileView.jsx))**:
    - Sticky header with `NavBar`, title, back navigation to `/home`, and top `Export` button.
    - Smooth `CapsuleTabs` touch navigation (`Users`, `Inventory`, `Audit`, `Schema`, `Values`).
    - Mobile User Management with instant search bar, `+ New User` button, touch user cards, and slide-up edit/create modals.
    - Mobile Audit Logs with real-time search, refresh action, and color-coded event badges.
    - Mobile System Values with horizontal sub-section pills, color dot indicators, and streamlined add/edit forms.
    - Mobile DB Schema viewer container with responsive iframe.
-4. **Thin Coordinator ([AdminMenu.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenu.jsx))**:
+4. **Thin Coordinator ([AdminMenu.jsx](/arise/src/pages/Admin/AdminMenu.jsx))**:
    - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
 
 
 
-#### Short Expiry Page Mobile Adaptation: [ShortExpPage.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpPage.jsx)
+#### Short Expiry Page Mobile Adaptation: [ShortExpPage.jsx](/arise/src/pages/Shortexp/ShortExpPage.jsx)
 Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
-1. **Shared Headless Logic ([useShortExpPage.js](file:///d:/dev/arise/src/pages/Shortexp/useShortExpPage.js))**:
+1. **Shared Headless Logic ([useShortExpPage.js](/arise/src/pages/Shortexp/useShortExpPage.js))**:
    - Manages short expiry items loading for the active unit (`OPD`, etc.), item normalization, and expiry date sorting.
    - Provides live search filtering (drug name, batch no, PKU) and urgency filters (`critical` < 30 days, `warning` < 90 days).
    - Preserves 6M/5M/4M/3M/2M/1M monthly breakdown Excel export (`xlsx`).
    - Manages Issuer archival & database clearing workflow.
    - Zero raw JSX in hook to prevent esbuild compilation issues.
-2. **Desktop View ([ShortExpDesktopView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpDesktopView.jsx))**:
+2. **Desktop View ([ShortExpDesktopView.jsx](/arise/src/pages/Shortexp/ShortExpDesktopView.jsx))**:
    - 100% of the original Ant Design table experience preserved for screens $\ge 768\text{px}$.
    - Horizontal table with fixed left column, monthly countdown columns, pagination, and `onRow` click handler.
-3. **Mobile Touch View ([ShortExpMobileView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpMobileView.jsx))**:
+3. **Mobile Touch View ([ShortExpMobileView.jsx](/arise/src/pages/Shortexp/ShortExpMobileView.jsx))**:
    - Sticky header with `NavBar`, active unit badge, `+ Entry` shortcut button, and integrated `SearchBar`.
    - Urgency filter pills with live counts (`All`, `Critical <30d` with red indicator, `Upcoming <90d` with amber indicator).
    - High-contrast touch cards featuring color-coded urgency borders, batch tags, days-left badges, shelf row, and bold total quantity counters.
-   - One-tap card click triggers [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx) (which routes to touch bottom sheet [ShortExpMobilePopup.jsx](file:///d:/dev/arise/src/components/ShortExpMobilePopup.jsx)).
+   - One-tap card click triggers [ShortExpModal.jsx](/arise/src/components/ShortExpModal.jsx) (which routes to touch bottom sheet [ShortExpMobilePopup.jsx](/arise/src/components/ShortExpMobilePopup.jsx)).
    - Sticky bottom action bar with Excel export and Issuer archive trigger with `Dialog.confirm` and `SafeArea`.
-4. **Thin Coordinator ([ShortExpPage.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpPage.jsx))**:
+4. **Thin Coordinator ([ShortExpPage.jsx](/arise/src/pages/Shortexp/ShortExpPage.jsx))**:
    - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
 
 
 
-#### Indent Record Page Mobile Adaptation: [IndentRecordPage.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordPage.jsx)
+#### Indent Record Page Mobile Adaptation: [IndentRecordPage.jsx](/arise/src/pages/Cart/IndentRecordPage.jsx)
 Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
-1. **Shared Headless Logic ([useIndentRecord.js](file:///d:/dev/arise/src/pages/Cart/useIndentRecord.js))**:
+1. **Shared Headless Logic ([useIndentRecord.js](/arise/src/pages/Cart/useIndentRecord.js))**:
    - Manages indent records and adhoc requests fetching, item deduplication, and combined sorting.
    - Centralizes filtering by date range, indenter user, and debounced item name search.
    - Preserves full Kew.PS-8 PDF generation (`jsPDF` + `jspdf-autotable`) and Excel spreadsheet export (`xlsx`).
    - Handles multi-row selection, batch export, and pagination calculations.
-2. **Desktop View ([IndentRecordDesktopView.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordDesktopView.jsx))**:
+2. **Desktop View ([IndentRecordDesktopView.jsx](/arise/src/pages/Cart/IndentRecordDesktopView.jsx))**:
    - 100% of the original Ant Design desktop table preserved for screens $\ge 768\text{px}$.
    - Multi-column sorters, expandable table rows, `RangePicker`, and `Select` dropdown.
-3. **Mobile Touch View ([IndentRecordMobileView.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordMobileView.jsx))**:
+3. **Mobile Touch View ([IndentRecordMobileView.jsx](/arise/src/pages/Cart/IndentRecordMobileView.jsx))**:
    - Sticky header with `NavBar`, unit badge, and search bar.
    - Filter pills with native wheel `Picker` for indenters and quick date range presets (`Today`, `7 Days`, `This Month`, `Custom`).
    - Touch cards per record with status tags, metadata badges, and expandable item rows.
    - Individual 1-tap Kew.PS-8 PDF preview per record.
    - Floating batch action bottom bar for multi-selected Kew.PS-8 PDF and Excel export with `SafeArea`.
-4. **Thin Coordinator ([IndentRecordPage.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordPage.jsx))**:
+4. **Thin Coordinator ([IndentRecordPage.jsx](/arise/src/pages/Cart/IndentRecordPage.jsx))**:
    - Dynamic view routing at the `768px` breakpoint via `useIsMobile`.
 
 
 
-#### Cart Page Mobile Adaptation: [CartPage.jsx](file:///d:/dev/arise/src/pages/Cart/CartPage.jsx)
+#### Cart Page Mobile Adaptation: [CartPage.jsx](/arise/src/pages/Cart/CartPage.jsx)
 Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
-1. **Shared Headless Logic ([useCartPage.js](file:///d:/dev/arise/src/pages/Cart/useCartPage.js))**:
+1. **Shared Headless Logic ([useCartPage.js](/arise/src/pages/Cart/useCartPage.js))**:
    - Manages submitted cart session fetching, item deduplication, and selection.
    - Handles item quantity modification and clearance dialogs.
    - Automates PhIS batch bot execution with real-time SSE event streaming and abort handling.
    - Kew.PS-8 PDF multi-page generation and live preview with `jsPDF` and `jspdf-autotable`.
-2. **Desktop View ([CartDesktopView.jsx](file:///d:/dev/arise/src/pages/Cart/CartDesktopView.jsx))**:
+2. **Desktop View ([CartDesktopView.jsx](/arise/src/pages/Cart/CartDesktopView.jsx))**:
    - Full-width desktop collapsible panels, bulk selection checkboxes, and item tables.
    - PhIS bot execution modal with terminal-style logs and success report dialogs.
-3. **Mobile Touch View ([CartMobileView.jsx](file:///d:/dev/arise/src/pages/Cart/CartMobileView.jsx))**:
+3. **Mobile Touch View ([CartMobileView.jsx](/arise/src/pages/Cart/CartMobileView.jsx))**:
    - Touch cards per session with expandable item lists and visual status tags.
    - One-tap quantity adjustment bottom sheet (`Popup`) with increment/decrement steppers.
    - Mobile PhIS automation modal with live log terminal and easy-copy Indent number button.
    - Floating sticky bottom bar for batch Kew.PS-8 PDF export and select all.
-4. **Thin Coordinator ([CartPage.jsx](file:///d:/dev/arise/src/pages/Cart/CartPage.jsx))**:
+4. **Thin Coordinator ([CartPage.jsx](/arise/src/pages/Cart/CartPage.jsx))**:
    - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
 
 
-#### 1. Extracted Shared Logic: [useIndentPage.js](file:///d:/dev/arise/src/pages/Indent/useIndentPage.js)
+#### 1. Extracted Shared Logic: [useIndentPage.js](/arise/src/pages/Indent/useIndentPage.js)
 Centralized 100% of the inventory loading, filtering, pagination, and modal selection logic:
 - Fetches full departmental inventory for the active unit (`OPD`, `IPD`, `ED`, etc.).
 - Dynamically extracts unique shelf rows (`indentRows`) and sources (`indentSources`).
@@ -200,13 +260,13 @@ Centralized 100% of the inventory loading, filtering, pagination, and modal sele
 - Handles pagination calculations (`paginatedDrugs`, `totalPages`, `handlePageChange`).
 - Manages drug selection and indent modal visibility.
 
-#### 2. Preserved Desktop Experience: [IndentDesktopView.jsx](file:///d:/dev/arise/src/pages/Indent/IndentDesktopView.jsx)
+#### 2. Preserved Desktop Experience: [IndentDesktopView.jsx](/arise/src/pages/Indent/IndentDesktopView.jsx)
 Maintains the complete original Ant Design desktop layout for screens $\ge 768\text{px}$:
 - Table and List view switcher (`TableOutlined`, `UnorderedListOutlined`).
 - Desktop Table with multi-column sorting, pagination, and horizontal scroll.
 - Responsive right margin offset for the desktop side drawer.
 
-#### 3. Created Mobile Touch Experience: [IndentMobileView.jsx](file:///d:/dev/arise/src/pages/Indent/IndentMobileView.jsx)
+#### 3. Created Mobile Touch Experience: [IndentMobileView.jsx](/arise/src/pages/Indent/IndentMobileView.jsx)
 Built a high-performance, touch-first catalog interface with `antd-mobile`:
 - **Sticky Header**: `NavBar` with department unit badge (`OPD`) and integrated `SearchBar` for quick search by drug name, item code, PKU, or row.
 - **Filter Pills with Native Wheel Pickers**:
@@ -219,8 +279,8 @@ Built a high-performance, touch-first catalog interface with `antd-mobile`:
   - Prominent **+ Indent** button / whole card click target.
 - **Mobile Stepper Pagination**: Compact, thumb-friendly `[Prev]` and `[Next]` pagination bar with current page indicator.
 
-#### 4. Upgraded Indent Drawer to Mobile Bottom Sheet: [IndentMobilePopup.jsx](file:///d:/dev/arise/src/pages/Indent/IndentMobilePopup.jsx) & [IndentModal.jsx](file:///d:/dev/arise/src/pages/Indent/IndentModal.jsx)
-Previously, [IndentModal.jsx](file:///d:/dev/arise/src/pages/Indent/IndentModal.jsx) used an unmasked desktop side drawer (`width={500}`) that overflowed portrait mobile screens.
+#### 4. Upgraded Indent Drawer to Mobile Bottom Sheet: [IndentMobilePopup.jsx](/arise/src/pages/Indent/IndentMobilePopup.jsx) & [IndentModal.jsx](/arise/src/pages/Indent/IndentModal.jsx)
+Previously, [IndentModal.jsx](/arise/src/pages/Indent/IndentModal.jsx) used an unmasked desktop side drawer (`width={500}`) that overflowed portrait mobile screens.
 - **Desktop**: Retains the existing side `Drawer`.
 - **Mobile**: Automatically switches via `useIsMobile(768)` to a slide-up bottom sheet (`Popup`):
   - Drug summary card (Name, PKU, Unit, Shelf Row, Purchase Type).
@@ -229,7 +289,7 @@ Previously, [IndentModal.jsx](file:///d:/dev/arise/src/pages/Indent/IndentModal.
   - Optional Remarks `TextArea` with character counter.
   - Sticky bottom action buttons with `SafeArea` (`Cancel` and `Add to Cart`).
 
-#### 5. Connected the Coordinator: [IndentPage.jsx](file:///d:/dev/arise/src/pages/Indent/IndentPage.jsx)
+#### 5. Connected the Coordinator: [IndentPage.jsx](/arise/src/pages/Indent/IndentPage.jsx)
 ```jsx
 const IndentPage = () => {
     const isMobile = useIsMobile(768);
@@ -247,7 +307,7 @@ const IndentPage = () => {
 
 ### Added
 
-#### 1. Extracted Shared Logic: [useRoutineSummary.js](file:///d:/dev/arise/src/pages/Indent/useRoutineSummary.js)
+#### 1. Extracted Shared Logic: [useRoutineSummary.js](/arise/src/pages/Indent/useRoutineSummary.js)
 Moved 100% of the session data fetching, inventory alignment, item editing, and submission logic into a headless custom hook:
 - Loads active draft session (`/indent_sessions/draft`) and retrieves all indented items.
 - Aligns full rack inventory to automatically surface un-indented shelf items as mock items (`requested_qty: 0`).
@@ -257,13 +317,13 @@ Moved 100% of the session data fetching, inventory alignment, item editing, and 
 - Handles final submission (`/indent_items/bulk` and updating session status to `Submitted`).
 - Provides quick stock adjustment helpers (`setEditBalanceQuick`, `adjustEditBalance`, `adjustEditQty`).
 
-#### 2. Preserved Desktop Experience: [RoutineSummaryDesktopView.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryDesktopView.jsx)
+#### 2. Preserved Desktop Experience: [RoutineSummaryDesktopView.jsx](/arise/src/pages/Indent/RoutineSummaryDesktopView.jsx)
 Maintains the complete original Ant Design desktop layout for screens $\ge 768\text{px}$:
 - Table view and List view toggles (`TableOutlined`, `UnorderedListOutlined`).
 - Desktop Table with custom scroll and row-click edit modal (`width={800}`).
 - Desktop progress bar, Rak tag, and resume affix.
 
-#### 3. Created Mobile Touch Experience: [RoutineSummaryMobileView.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryMobileView.jsx)
+#### 3. Created Mobile Touch Experience: [RoutineSummaryMobileView.jsx](/arise/src/pages/Indent/RoutineSummaryMobileView.jsx)
 Crafted specifically for pharmacy staff reviewing and confirming indents on mobile:
 - **Sticky Header**: `NavBar` with shelf name (`Rak ${rak} Summary`) and a quick **Resume** action button to jump directly back to shelf walking.
 - **Session Metrics Card**:
@@ -285,13 +345,13 @@ Crafted specifically for pharmacy staff reviewing and confirming indents on mobi
 - **Item Edit Bottom Sheet (`Popup`)**:
   - Tapping any card opens a slide-up bottom sheet instead of a desktop dialog.
   - Includes `NIL (0)` and `MAX (quota)` quick-tap presets, plus numeric steppers (`-` / `+`).
-  - Short Expiry button opening the mobile [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx).
+  - Short Expiry button opening the mobile [ShortExpModal.jsx](/arise/src/components/ShortExpModal.jsx).
   - Multi-line remarks `TextArea` with character counter.
 - **Sticky Bottom Action Bar**:
   - Pinned with `SafeArea` at the bottom of the screen.
   - Prominent **Confirm & Send ({count} Items)** button with a mobile confirmation prompt (`Dialog.confirm`) before final submission to Substore/Issuer.
 
-#### 4. Connected the Coordinator: [RoutineSummaryPage.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryPage.jsx)
+#### 4. Connected the Coordinator: [RoutineSummaryPage.jsx](/arise/src/pages/Indent/RoutineSummaryPage.jsx)
 ```jsx
 const RoutineSummaryPage = () => {
     const isMobile = useIsMobile(768);
@@ -309,17 +369,17 @@ const RoutineSummaryPage = () => {
 
 ### Added
 
-#### 1. Extracted Shared Logic: [useShortExp.js](file:///d:/dev/arise/src/components/useShortExp.js)
+#### 1. Extracted Shared Logic: [useShortExp.js](/arise/src/components/useShortExp.js)
 Created a headless custom hook encapsulating all batch data management:
 - Loads existing short expiry records from `/shortexp/item/${selectedItem.id}`.
 - Manages adding, removing, and field changes across batches.
 - Handles saving and payload formatting to `/shortexp/item/${selectedItem.id}/batches`.
 - Provides loading and saving spinner states.
 
-#### 2. Preserved Desktop Experience: [ShortExpDesktopModal.jsx](file:///d:/dev/arise/src/components/ShortExpDesktopModal.jsx)
-Maintains the exact original Ant Design desktop modal with [ShortExpTabs.jsx](file:///d:/dev/arise/src/components/ShortExpTabs.jsx) for screens $\ge 768\text{px}$.
+#### 2. Preserved Desktop Experience: [ShortExpDesktopModal.jsx](/arise/src/components/ShortExpDesktopModal.jsx)
+Maintains the exact original Ant Design desktop modal with [ShortExpTabs.jsx](/arise/src/components/ShortExpTabs.jsx) for screens $\ge 768\text{px}$.
 
-#### 3. Created Mobile Touch Experience: [ShortExpMobilePopup.jsx](file:///d:/dev/arise/src/components/ShortExpMobilePopup.jsx)
+#### 3. Created Mobile Touch Experience: [ShortExpMobilePopup.jsx](/arise/src/components/ShortExpMobilePopup.jsx)
 Replaced the center desktop dialog on mobile with an Ant Design Mobile slide-up bottom sheet (`Popup`):
 - **Slide-Up Bottom Sheet**: Smooth iOS/Android bottom drawer with drag indicator and quick `✕` close button.
 - **Drug Summary Banner**: Highlights drug name, PKU pill badge, unit, and shelf row.
@@ -331,7 +391,7 @@ Replaced the center desktop dialog on mobile with an Ant Design Mobile slide-up 
   - Delete batch option with confirmation when more than 1 batch exists.
 - **Sticky Bottom Action Bar**: Pinned at the bottom with `SafeArea` support, featuring large `Cancel` and `Save Batches` buttons.
 
-#### 4. Connected the Coordinator: [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx)
+#### 4. Connected the Coordinator: [ShortExpModal.jsx](/arise/src/components/ShortExpModal.jsx)
 ```jsx
 const ShortExpModal = ({ isOpen, onClose, selectedItem }) => {
     const isMobile = useIsMobile(768);
@@ -360,11 +420,11 @@ const ShortExpModal = ({ isOpen, onClose, selectedItem }) => {
 ---
 
 ### Global Impact
-Because [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx) preserves its original props interface (`isOpen`, `onClose`, `selectedItem`), this mobile slide-up experience automatically works across all screens that trigger it:
-- [RoutineIndentMobileView.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineIndentMobileView.jsx)
-- [RoutineSummaryPage.jsx](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryPage.jsx)
-- [ShortExpPage.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpPage.jsx)
-- [ShortExpEntry.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntry.jsx)
+Because [ShortExpModal.jsx](/arise/src/components/ShortExpModal.jsx) preserves its original props interface (`isOpen`, `onClose`, `selectedItem`), this mobile slide-up experience automatically works across all screens that trigger it:
+- [RoutineIndentMobileView.jsx](/arise/src/pages/Indent/RoutineIndentMobileView.jsx)
+- [RoutineSummaryPage.jsx](/arise/src/pages/Indent/RoutineSummaryPage.jsx)
+- [ShortExpPage.jsx](/arise/src/pages/Shortexp/ShortExpPage.jsx)
+- [ShortExpEntry.jsx](/arise/src/pages/Shortexp/ShortExpEntry.jsx)
 
 
 ## \[Unreleased\] - 2026-10-19

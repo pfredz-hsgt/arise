@@ -400,7 +400,11 @@ const MainLayout = () => {
                         zIndex: 1000,
                         background: '#ffffff',
                         borderTop: '1px solid #e2e8f0',
-                        boxShadow: '0 -2px 10px rgba(0,0,0,0.06)'
+                        boxShadow: '0 -2px 10px rgba(0,0,0,0.06)',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        WebkitTapHighlightColor: 'transparent',
                     }}
                 >
                     <TabBar activeKey={getActiveMobileTab(location.pathname)} onChange={handleMobileTabChange}>
@@ -408,7 +412,15 @@ const MainLayout = () => {
                             <TabBar.Item
                                 key={item.key}
                                 icon={item.icon}
-                                title={item.title}
+                                title={
+                                    <span style={{
+                                        userSelect: 'none',
+                                        WebkitUserSelect: 'none',
+                                        WebkitTouchCallout: 'none',
+                                    }}>
+                                        {item.title}
+                                    </span>
+                                }
                             />
                         ))}
                     </TabBar>
@@ -510,6 +522,16 @@ const MainLayout = () => {
             </Modal>
 
             <style>{`
+        .mobile-tabbar-container,
+        .mobile-tabbar-container * {
+          -webkit-touch-callout: none !important;
+          -webkit-user-select: none !important;
+          -khtml-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          -webkit-tap-highlight-color: transparent !important;
+        }
         @media (min-width: 768px) {
           .mobile-tabbar-container {
             display: none !important;

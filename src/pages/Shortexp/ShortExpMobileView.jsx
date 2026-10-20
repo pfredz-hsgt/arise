@@ -609,6 +609,9 @@ const ShortExpMobileView = ({
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         WebkitTapHighlightColor: 'transparent',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
                     }}
                     onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)'; }}
                     onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
