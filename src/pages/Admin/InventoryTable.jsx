@@ -76,7 +76,10 @@ const InventoryTable = () => {
     const handleAdd = () => {
         setEditingDrug(null);
         form.resetFields();
-        form.setFieldsValue({ main_unit: 'OPD', convert_sku: 1 });
+        form.setFieldsValue({
+            main_unit: 'OPD',
+            convert_sku: 1,
+        });
         setModalVisible(true);
     };
 
@@ -84,7 +87,8 @@ const InventoryTable = () => {
         setEditingDrug(drug);
         form.setFieldsValue({
             ...drug,
-            main_unit: drug.main_unit || 'OPD'
+            main_unit: drug.main_unit || 'OPD',
+            convert_sku: drug.convert_sku ?? 1,
         });
         setModalVisible(true);
     };
@@ -400,6 +404,7 @@ const InventoryTable = () => {
                         <Form.Item
                             name="convert_sku"
                             label="Convert SKU"
+                            initialValue={1}
                         >
                             <InputNumber placeholder="1" style={{ width: 90 }} min={1} inputMode="numeric" />
                         </Form.Item>
