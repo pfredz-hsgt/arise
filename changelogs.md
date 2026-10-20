@@ -1,7 +1,80 @@
 # Changelog
 
 
-### What Was Done
+### Summary of Changes v1.1.4
+
+
+1. **Coordinator: [`LoginPage.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginPage.jsx)**:
+   - Refactored into a thin coordinator detecting `useIsMobile(768)`.
+   - Delegates state management to `useLoginPage` and renders [`LoginMobileView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginMobileView.jsx) on mobile or [`LoginDesktopView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginDesktopView.jsx) on desktop.
+
+2. **Headless Logic: [`useLoginPage.js`](file:///d:/dev/arise/src/pages/Auth/useLoginPage.js)**:
+   - Houses login submission, recovery link dispatching, error feedback, modal/loading state, and routing logic shared across both viewports.
+
+3. **Desktop View: [`LoginDesktopView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginDesktopView.jsx)**:
+   - Preserves the existing desktop glassmorphism design with radial gradients and desktop modal.
+
+4. **Touch-First Mobile View: [`LoginMobileView.jsx`](file:///d:/dev/arise/src/pages/Auth/LoginMobileView.jsx)**:
+   - **Hero Header**: Features the hospital pharmacy blue gradient (`#001529` to `#00457c`) with subtle ambient glow, drop-shadowed ARISE logo, signature metallic gradient branding, and Segamat hospital badge.
+   - **Mobile Form Card**: Floating card with rounded corners (`22px`), comfortable touch inputs with prefix icons (email, password), and primary gradient Sign In button (`48px` touch target) with loading spinner.
+   - **Mobile Forgot Password Drawer (`Popup`)**: Replaces the desktop dialog with an `antd-mobile` slide-up bottom sheet drawer with grab indicator, recovery instruction card, email input, and full-width reset trigger.
+   - **Device Integration**: Uses `<SafeArea position="top" />` and `<SafeArea position="bottom" />` for safe display on modern phone screens with notches and home indicators.
+
+Added the **Edit Profile** menu option and mobile slide-up drawer to [`HomeMobileView.jsx`](file:///d:/dev/arise/src/pages/Home/HomeMobileView.jsx):
+
+### Implementation Details
+
+1. **Updated `userMenu` in [`HomeMobileView.jsx`](file:///d:/dev/arise/src/pages/Home/HomeMobileView.jsx)**:
+   - Added `Edit Profile` with `<UserOutlined />` icon.
+   - Clicking triggers `openEditProfile()`, pre-populating current user data into the form and opening the drawer.
+
+2. **Mobile Edit Profile Bottom Sheet Drawer (`Popup`)**:
+   - **Slide-up Bottom Sheet**: Styled with rounded top corners, top drag indicator, title header, and close button.
+   - **Account Information Card**: Fields for **Full Name** and **Email Address** with validation.
+   - **Change Password (Collapsible)**: Fields for **New Password** and **Confirm Password** with matching validator and show/hide password toggles.
+   - **PHIS Credentials (Collapsible)**: Fields for optional **PHIS Username** and **PHIS Password**.
+   - **Sticky Bottom Action Bar**: Sticky footer with **Cancel** and primary **Save Changes** buttons, including safe area padding and loading state.
+   - **Full State Integration**: Uses `updateProfile` and `changePassword` from `useAuth()` matching the desktop edit profile logic.
+
+The **Entry** button on [`ShortExpMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpMobileView.jsx) has been converted to a floating `+` action button:
+
+### Changes Made
+
+1. **Cleaned up NavBar Header**:
+   - Removed the compact `Entry` button that was in the title bar next to "Short Expiry", restoring the standard centered title header with the unit badge on the right.
+
+2. **Added Floating `+` Action Button (FAB)**:
+   - Placed a floating circular `+` button positioned at `bottom: 114px` and `right: 18px` so it floats above the bottom export/archive action bar and the persistent `TabBar`.
+   - Styled with a primary blue gradient (`#1677ff` to `#0958d9`), elevated drop shadow, smooth active press animation (`scale(0.92)` on tap), and navigates directly to `/shortexp-entry`.
+
+
+
+
+1. **Persistent Mobile TabBar in [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx)**:
+   - Integrated the Ant Design Mobile `TabBar` persistently at the bottom of `MainLayout` when on mobile viewports (`isMobile`).
+   - Automatic route-aware tab activation via `getActiveMobileTab(location.pathname)`:
+     - **Home** (`/home`)
+     - **Routine** (`/routine-summary`, `/routine-indent`)
+     - **Urgent** (`/indent`)
+     - **Cart** (`/cart`, for Issuers)
+     - **Short Exp** (`/shortexp`, `/shortexp-entry`, `/shortexp-archive`)
+     - **Records** (`/indent-list`)
+   - Navigation via `handleMobileTabChange` triggers client-side routing smoothly.
+
+2. **Hidden Header and Sidebar Navigation on Mobile**:
+   - Conditioned `<Header className="site-header">` to render only on non-mobile screens (`!isMobile`).
+   - Conditioned the drawer navigation (`<Drawer className="mobile-drawer">`) and desktop sidebar (`<Sider>`) to stay hidden on mobile.
+   - Set layout margin to `marginLeft: 0` on mobile, removing the desktop sidebar offset and 64px header margin.
+   - Updated responsive CSS in both [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx) and [`style.css`](file:///d:/dev/arise/src/style.css) so `.site-content` renders edge-to-edge with no clipping or gaps.
+
+3. **Removed Redundant TabBar from [`HomeMobileView.jsx`](file:///d:/dev/arise/src/pages/Home/HomeMobileView.jsx)**:
+   - Removed the local fixed `TabBar` and `onTabChange` handler from `HomeMobileView.jsx`.
+   - Added a compact user avatar dropdown (Profile info & Sign Out) in the top department greeting banner beside the unit badge so mobile users can manage their profile and sign out without needing the desktop header.
+
+4. **Coordinated Floating Bottom Action Bars**:
+   - Adjusted sticky/floating action bars in [`RoutineSummaryMobileView.jsx`](file:///d:/dev/arise/src/pages/Indent/RoutineSummaryMobileView.jsx), [`RoutineIndentMobileView.jsx`](file:///d:/dev/arise/src/pages/Indent/RoutineIndentMobileView.jsx), [`IndentMobileView.jsx`](file:///d:/dev/arise/src/pages/Indent/IndentMobileView.jsx), [`ShortExpMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpMobileView.jsx), [`ShortExpEntryMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntryMobileView.jsx), [`ShortExpArchiveMobileView.jsx`](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchiveMobileView.jsx), and [`IndentRecordMobileView.jsx`](file:///d:/dev/arise/src/pages/Cart/IndentRecordMobileView.jsx) to sit at `bottom: 50` with bottom padding clearance so they dock neatly above the persistent `TabBar`.
+
+### What Was Done v1.1.3
 
 #### Short Expiry Entry Mobile Adaptation: [ShortExpEntry.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntry.jsx)
 Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:

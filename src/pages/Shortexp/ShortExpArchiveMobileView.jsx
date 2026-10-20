@@ -69,7 +69,7 @@ const ShortExpArchiveMobileView = ({
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: '100%',
-                    paddingBottom: '80px',
+                    paddingBottom: '130px',
                     background: '#f8fafc'
                 }}
             >
@@ -421,7 +421,7 @@ const ShortExpArchiveMobileView = ({
                 <div
                     style={{
                         position: 'fixed',
-                        bottom: 0,
+                        bottom: 50,
                         left: 0,
                         right: 0,
                         background: '#ffffff',

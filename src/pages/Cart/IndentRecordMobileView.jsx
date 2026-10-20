@@ -241,7 +241,7 @@ const IndentRecordMobileView = ({
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: '100%',
-                    paddingBottom: selectedRowKeys.length > 0 ? 80 : 32,
+                    paddingBottom: selectedRowKeys.length > 0 ? 140 : 80,
                     background: '#f8fafc'
                 }}
             >
@@ -260,19 +260,16 @@ const IndentRecordMobileView = ({
                         backArrow={<LeftOutlined style={{ fontSize: 16 }} />}
                         onBack={() => navigate('/home')}
                         right={
-                            <span
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    padding: '3px 8px',
-                                    background: '#eff6ff',
-                                    color: getUnitColor(unit) || '#1677ff',
-                                    borderRadius: 12,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    border: '1px solid #bfdbfe'
-                                }}
-                            >
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '3px 8px',
+                                background: getUnitColor(unit),
+                                color: '#ffffff',
+                                borderRadius: 12,
+                                fontSize: 11,
+                                fontWeight: 700
+                            }}>
                                 {unit}
                             </span>
                         }
@@ -741,7 +738,7 @@ const IndentRecordMobileView = ({
                     <div
                         style={{
                             position: 'fixed',
-                            bottom: 0,
+                            bottom: 50,
                             left: 0,
                             right: 0,
                             background: '#ffffff',

@@ -146,7 +146,7 @@ const CartMobileView = ({
             display: 'flex',
             flexDirection: 'column',
             minHeight: '100%',
-            paddingBottom: '30px',
+            paddingBottom: '80px',
             background: '#f8fafc'
         }}>
             {/* Header */}
@@ -399,7 +399,7 @@ const CartMobileView = ({
                                                         borderRadius: 6,
                                                         padding: '1px 8px',
                                                         fontSize: 13,
-                                                        fontWeight: 800,
+                                                        fontWeight: 500,
                                                         flexShrink: 0
                                                     }}>
                                                         Qty: {item.requested_qty || 0}

@@ -32,11 +32,12 @@
 /* Responsive adjustments for mobile viewports */
 @media (max-width: 767.98px) {
   .site-content {
-    margin: 8px 6px !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
   }
   .site-content > div {
-    padding: 8px !important;
-    border-radius: 8px !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
   }

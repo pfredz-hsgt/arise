@@ -186,7 +186,7 @@ const CartDesktopView = ({
                             disabled={selectedSessions.length === 0}
                             size="medium"
                             style={{ backgroundColor: selectedSessions.length === 0 ? undefined : '#6D28D9', borderColor: selectedSessions.length === 0 ? '#d6d6d6' : '#6D28D9', color: selectedSessions.length === 0 ? undefined : '#fff' }}
-                        />
+                        ><span>Preview</span></Button>
                         <Button
                             icon={<DownloadOutlined style={{ fontSize: 19 }} />}
                             onClick={() => processPDFExport('download')}
@@ -280,7 +280,7 @@ const CartDesktopView = ({
                                                         </Text>
                                                         <Space wrap={false} size={[4, 4]}>
                                                             {item.inventory_items?.pku && (
-                                                                  <Text type="secondary" style={{ color: '#d46b08', fontSize: '13px', padding: '2px 2px' }}>({item.inventory_items?.pku})</Text>
+                                                                <Text type="secondary" style={{ color: '#d46b08', fontSize: '13px', padding: '2px 2px' }}>({item.inventory_items?.pku})</Text>
                                                             )}
                                                             {item.inventory_items?.puchase_type && (
                                                                 <Tag color={getPuchaseTypeColor(item.inventory_items?.puchase_type)} style={{ margin: 0 }}>

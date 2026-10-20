@@ -114,7 +114,7 @@ const RoutineSummaryMobileView = ({
             display: 'flex',
             flexDirection: 'column',
             minHeight: '100%',
-            paddingBottom: '88px', // Space for fixed bottom action bar 
+            paddingBottom: '140px', // Space for fixed bottom action bar + persistent TabBar
             background: '#f8fafc'
         }}>
             {/* Mobile Header */}
@@ -149,7 +149,7 @@ const RoutineSummaryMobileView = ({
                     }
                 >
                     <span style={{ fontWeight: 700, fontSize: 16 }}>
-                        Rak {sessionData?.rak} Summary
+                        Indent Summary - Rak {sessionData?.rak}
                     </span>
                 </NavBar>
             </div>
@@ -429,7 +429,7 @@ const RoutineSummaryMobileView = ({
             {/* Sticky Bottom Action Bar */}
             <div style={{
                 position: 'fixed',
-                bottom: 0,
+                bottom: 50,
                 left: 0,
                 right: 0,
                 zIndex: 100,

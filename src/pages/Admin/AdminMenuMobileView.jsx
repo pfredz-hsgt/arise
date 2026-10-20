@@ -983,7 +983,7 @@ const AdminMenuMobileView = ({
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: '100%',
-                    paddingBottom: '32px',
+                    paddingBottom: '80px',
                     background: '#f8fafc'
                 }}
             >

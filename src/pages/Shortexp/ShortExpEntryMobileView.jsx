@@ -321,7 +321,7 @@ const ShortExpEntryMobileView = ({
                         display: 'flex',
                         flexDirection: 'column',
                         minHeight: '100%',
-                        paddingBottom: '32px',
+                        paddingBottom: '80px',
                         background: '#f8fafc'
                     }}
                 >
@@ -537,7 +537,7 @@ const ShortExpEntryMobileView = ({
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: '100%',
-                    paddingBottom: '88px',
+                    paddingBottom: '140px',
                     background: '#f8fafc'
                 }}
             >
@@ -668,7 +668,7 @@ const ShortExpEntryMobileView = ({
                 <div
                     style={{
                         position: 'fixed',
-                        bottom: 0,
+                        bottom: 50,
                         left: 0,
                         right: 0,
                         background: '#ffffff',

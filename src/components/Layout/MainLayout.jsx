@@ -13,10 +13,14 @@ import {
     UserOutlined,
     LogoutOutlined,
     HomeOutlined,
-    LockOutlined
+    LockOutlined,
+    AuditOutlined,
+    RocketOutlined
 } from '@ant-design/icons';
+import { TabBar, SafeArea } from 'antd-mobile';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUnitColor } from '../../lib/colorMappings';
+import useIsMobile from '../../hooks/useIsMobile';
 import logo from '../../img/logo.svg';
 
 const { Header, Sider, Content } = Layout;
@@ -25,6 +29,7 @@ const { Title, Text } = Typography;
 const MainLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const isMobile = useIsMobile(768);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const { user, profile, isIssuer, signOut, changePassword, updateProfile } = useAuth();
@@ -178,154 +183,238 @@ const MainLayout = () => {
         setMobileMenuOpen(false);
     };
 
+    // TabBar items for persistent mobile navigation
+    const mobileTabItems = [
+        {
+            key: '/home',
+            title: 'Home',
+            icon: <HomeOutlined style={{ fontSize: 19 }} />,
+        },
+        {
+            key: '/routine-summary',
+            title: 'Routine',
+            icon: <AuditOutlined style={{ fontSize: 19 }} />,
+        },
+        {
+            key: '/indent',
+            title: 'Urgent',
+            icon: <RocketOutlined style={{ fontSize: 19 }} />,
+        },
+        ...(isIssuer ? [{
+            key: '/cart',
+            title: 'Cart',
+            icon: <ShoppingCartOutlined style={{ fontSize: 19 }} />,
+        }] : []),
+        {
+            key: '/shortexp',
+            title: 'Short Exp',
+            icon: <WarningOutlined style={{ fontSize: 19 }} />,
+        },
+        {
+            key: '/indent-list',
+            title: 'Records',
+            icon: <HistoryOutlined style={{ fontSize: 19 }} />,
+        },
+    ];
+
+    const getActiveMobileTab = (pathname) => {
+        if (pathname === '/home' || pathname === '/') return '/home';
+        if (pathname.startsWith('/routine')) return '/routine-summary';
+        if (pathname === '/indent') return '/indent';
+        if (pathname.startsWith('/shortexp')) return '/shortexp';
+        if (pathname === '/indent-list') return '/indent-list';
+        if (pathname === '/cart') return '/cart';
+        if (pathname === '/admin') return '/admin';
+        return pathname;
+    };
+
+    const handleMobileTabChange = (key) => {
+        if (location.pathname === key) return;
+        navigate(key);
+    };
+
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            {/* Desktop Sidebar */}
-            <Sider
-                breakpoint="lg"
-                collapsedWidth="0"
-                onCollapse={setCollapsed}
-                style={{
-                    overflow: 'auto',
-                    height: '100vh',
-                    position: 'fixed',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                }}
-                className="desktop-sider"
-            >
-                <div style={{ padding: '24px 16px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
-                    <Title level={4} style={{
-                        color: 'white',
-                        margin: 0,
-                        letterSpacing: '6px',
-                        fontWeight: 450,
-                        background: 'linear-gradient(to right, #ffffffff 0%, #ffeefbff 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        textTransform: 'uppercase',
-                        fontSize: '26px',
-                        fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-                    }}>
-                        ARISE
-                    </Title>
-                    <Typography.Text style={{
-                        color: 'rgba(255,255,255,0.5)',
-                        fontSize: '10px',
-                        letterSpacing: '0.5px',
-                        textTransform: 'uppercase',
-                        display: 'block',
-                        marginTop: '4px',
-                        fontWeight: 400
-                    }}>
-                        Farmasi Pesakit Luar<br />Hospital Segamat
-                    </Typography.Text>
-                </div>
-                <Menu
-                    theme="dark"
-                    mode="inline"
-                    selectedKeys={[location.pathname]}
-                    items={menuItems}
-                    onClick={handleMenuClick}
-                />
-            </Sider>
-
-            {/* Mobile Drawer */}
-            <Drawer
-                placement="left"
-                onClose={() => setMobileMenuOpen(false)}
-                open={mobileMenuOpen}
-                className="mobile-drawer"
-                styles={{
-                    body: { padding: 0, backgroundColor: '#001529' },
-                    header: { display: 'none' }
-                }}
-                width={200}
-            >
-                <div style={{ padding: '24px 16px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
-                    <Title level={4} style={{
-                        color: 'white',
-                        margin: 0,
-                        letterSpacing: '6px',
-                        fontWeight: 450,
-                        background: 'linear-gradient(to right, #ffffffff 0%, #ffeefbff 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        textTransform: 'uppercase',
-                        fontSize: '26px',
-                        fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-                    }}>
-                        ARISE
-                    </Title>
-                    <Typography.Text style={{
-                        color: 'rgba(255,255,255,0.5)',
-                        fontSize: '10px',
-                        letterSpacing: '0.5px',
-                        textTransform: 'uppercase',
-                        display: 'block',
-                        marginTop: '4px',
-                        fontWeight: 400
-                    }}>
-                        Farmasi Pesakit Luar<br />Hospital Segamat
-                    </Typography.Text>
-                </div>
-                <Menu
-                    theme="dark"
-                    mode="inline"
-                    selectedKeys={[location.pathname]}
-                    items={menuItems}
-                    onClick={handleMenuClick}
-                />
-            </Drawer>
-
-            <Layout style={{ marginLeft: collapsed ? 0 : 200 }}>
-                <Header
-                    className="site-header"
+            {/* Desktop Sidebar (hidden on mobile) */}
+            {!isMobile && (
+                <Sider
+                    breakpoint="lg"
+                    collapsedWidth="0"
+                    onCollapse={setCollapsed}
                     style={{
-                        padding: '0 16px',
-                        background: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        overflow: 'auto',
+                        height: '100vh',
+                        position: 'fixed',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
                     }}
+                    className="desktop-sider"
                 >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <Button
-                            type="text"
-                            icon={<MenuOutlined />}
-                            onClick={() => setMobileMenuOpen(true)}
-                            className="mobile-menu-button"
-                            style={{ fontSize: '18px', marginRight: 16 }}
-                        />
-
+                    <div style={{ padding: '24px 16px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
+                        <Title level={4} style={{
+                            color: 'white',
+                            margin: 0,
+                            letterSpacing: '6px',
+                            fontWeight: 450,
+                            background: 'linear-gradient(to right, #ffffffff 0%, #ffeefbff 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            textTransform: 'uppercase',
+                            fontSize: '26px',
+                            fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                        }}>
+                            ARISE
+                        </Title>
+                        <Typography.Text style={{
+                            color: 'rgba(255,255,255,0.5)',
+                            fontSize: '10px',
+                            letterSpacing: '0.5px',
+                            textTransform: 'uppercase',
+                            display: 'block',
+                            marginTop: '4px',
+                            fontWeight: 400
+                        }}>
+                            Farmasi Pesakit Luar<br />Hospital Segamat
+                        </Typography.Text>
                     </div>
+                    <Menu
+                        theme="dark"
+                        mode="inline"
+                        selectedKeys={[location.pathname]}
+                        items={menuItems}
+                        onClick={handleMenuClick}
+                    />
+                </Sider>
+            )}
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {currentUnit && (
-                            <Tag color={getUnitColor(currentUnit)} style={{ margin: 0, fontWeight: 600, fontSize: '13px', padding: '2px 8px' }}>
-                                {currentUnit}
-                            </Tag>
-                        )}
-                        {user && (
-                            <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
-                                <Avatar
-                                    style={{ backgroundColor: '#1890ff', cursor: 'pointer' }}
-                                    icon={<UserOutlined />}
-                                />
-                            </Dropdown>
-                        )}
+            {/* Mobile Drawer (hidden on mobile, replaced by bottom TabBar) */}
+            {!isMobile && (
+                <Drawer
+                    placement="left"
+                    onClose={() => setMobileMenuOpen(false)}
+                    open={mobileMenuOpen}
+                    className="mobile-drawer"
+                    styles={{
+                        body: { padding: 0, backgroundColor: '#001529' },
+                        header: { display: 'none' }
+                    }}
+                    width={200}
+                >
+                    <div style={{ padding: '24px 16px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <img src={logo} alt="ARISE Logo" style={{ maxWidth: '100%', height: 'auto', maxHeight: '64px', marginBottom: '0px' }} />
+                        <Title level={4} style={{
+                            color: 'white',
+                            margin: 0,
+                            letterSpacing: '6px',
+                            fontWeight: 450,
+                            background: 'linear-gradient(to right, #ffffffff 0%, #ffeefbff 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            textTransform: 'uppercase',
+                            fontSize: '26px',
+                            fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                        }}>
+                            ARISE
+                        </Title>
+                        <Typography.Text style={{
+                            color: 'rgba(255,255,255,0.5)',
+                            fontSize: '10px',
+                            letterSpacing: '0.5px',
+                            textTransform: 'uppercase',
+                            display: 'block',
+                            marginTop: '4px',
+                            fontWeight: 400
+                        }}>
+                            Farmasi Pesakit Luar<br />Hospital Segamat
+                        </Typography.Text>
                     </div>
-                </Header>
-                <Content className="site-content" style={{ margin: '24px 16px', overflow: 'initial' }}>
-                    <div style={{ padding: 24, background: '#fff', minHeight: 360, borderRadius: 8 }}>
+                    <Menu
+                        theme="dark"
+                        mode="inline"
+                        selectedKeys={[location.pathname]}
+                        items={menuItems}
+                        onClick={handleMenuClick}
+                    />
+                </Drawer>
+            )}
+
+            <Layout style={{ marginLeft: isMobile ? 0 : (collapsed ? 0 : 200) }}>
+                {/* Header (hidden on mobile) */}
+                {!isMobile && (
+                    <Header
+                        className="site-header"
+                        style={{
+                            padding: '0 16px',
+                            background: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <Button
+                                type="text"
+                                icon={<MenuOutlined />}
+                                onClick={() => setMobileMenuOpen(true)}
+                                className="mobile-menu-button"
+                                style={{ fontSize: '18px', marginRight: 16 }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {currentUnit && (
+                                <Tag color={getUnitColor(currentUnit)} style={{ margin: 0, fontWeight: 600, fontSize: '13px', padding: '2px 8px' }}>
+                                    {currentUnit}
+                                </Tag>
+                            )}
+                            {user && (
+                                <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
+                                    <Avatar
+                                        style={{ backgroundColor: '#1890ff', cursor: 'pointer' }}
+                                        icon={<UserOutlined />}
+                                    />
+                                </Dropdown>
+                            )}
+                        </div>
+                    </Header>
+                )}
+                <Content className="site-content" style={{ margin: isMobile ? 0 : '24px 16px', overflow: 'initial' }}>
+                    <div style={{ padding: isMobile ? 0 : 24, background: isMobile ? 'transparent' : '#fff', minHeight: isMobile ? 'auto' : 360, borderRadius: isMobile ? 0 : 8 }}>
                         <Outlet />
                     </div>
                 </Content>
             </Layout>
+
+            {/* Persistent Mobile Bottom Navigation Bar */}
+            {isMobile && (
+                <div
+                    className="mobile-tabbar-container"
+                    style={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 1000,
+                        background: '#ffffff',
+                        borderTop: '1px solid #e2e8f0',
+                        boxShadow: '0 -2px 10px rgba(0,0,0,0.06)'
+                    }}
+                >
+                    <TabBar activeKey={getActiveMobileTab(location.pathname)} onChange={handleMobileTabChange}>
+                        {mobileTabItems.map(item => (
+                            <TabBar.Item
+                                key={item.key}
+                                icon={item.icon}
+                                title={item.title}
+                            />
+                        ))}
+                    </TabBar>
+                    <SafeArea position="bottom" />
+                </div>
+            )}
 
             {/* Edit Profile Modal */}
             <Modal
@@ -421,15 +510,45 @@ const MainLayout = () => {
             </Modal>
 
             <style>{`
+        @media (min-width: 768px) {
+          .mobile-tabbar-container {
+            display: none !important;
+          }
+        }
         @media (min-width: 992px) {
           .mobile-menu-button {
             display: none !important;
           }
           .mobile-drawer {
-            display: none;
+            display: none !important;
           }
         }
-        @media (max-width: 991px) {
+        @media (max-width: 767.98px) {
+          .desktop-sider {
+            display: none !important;
+          }
+          .site-header {
+            display: none !important;
+          }
+          .mobile-menu-button {
+            display: none !important;
+          }
+          .mobile-drawer {
+            display: none !important;
+          }
+          .site-content {
+            margin: 0 !important;
+            margin-top: 0 !important;
+            padding-bottom: 56px !important;
+          }
+          .site-content > div {
+            padding: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+          }
+        }
+        @media (min-width: 768px) and (max-width: 991.98px) {
           .desktop-sider {
             display: none !important;
           }
@@ -442,8 +561,7 @@ const MainLayout = () => {
             width: 100%;
           }
           .site-content {
-            margin-top: 64px !important; /* 64px header + 24px existing top margin */
-            /* background-color: #e2e2e2ff; */
+            margin-top: 64px !important;
           }
         }
       `}</style>

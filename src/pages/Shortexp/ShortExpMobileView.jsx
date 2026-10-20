@@ -81,7 +81,7 @@ const ShortExpMobileView = ({
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: '100%',
-                    paddingBottom: user?.role === 'Issuer' ? 90 : 80,
+                    paddingBottom: user?.role === 'Issuer' ? 140 : 130,
                     background: '#f8fafc'
                 }}
             >
@@ -100,42 +100,24 @@ const ShortExpMobileView = ({
                         backArrow={<LeftOutlined style={{ fontSize: 16 }} />}
                         onBack={() => navigate('/home')}
                         right={
-                            <Button
-                                size="mini"
-                                shape="rounded"
-                                color="primary"
-                                onClick={() => navigate('/shortexp-entry')}
-                                style={{
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 3,
-                                    padding: '4px 10px'
-                                }}
-                            >
-                                <PlusOutlined style={{ fontSize: 11 }} /> Entry
-                            </Button>
-                        }
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
-                                Short Expiry
-                            </span>
-                            <span
-                                style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    padding: '2px 7px',
-                                    background: '#eff6ff',
-                                    color: getUnitColor(unit) || '#1677ff',
-                                    borderRadius: 10,
-                                    border: '1px solid #bfdbfe'
-                                }}
-                            >
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '3px 8px',
+                                background: getUnitColor(unit),
+                                color: '#ffffff',
+                                borderRadius: 12,
+                                fontSize: 11,
+                                fontWeight: 700
+                            }}>
                                 {unit}
                             </span>
-                        </div>
+                        }
+
+                    >
+                        <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+                            Short Expiry
+                        </span>
                     </NavBar>
 
                     {/* Search Bar */}
@@ -462,7 +444,7 @@ const ShortExpMobileView = ({
                                                 <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
                                                     Total Qty
                                                 </div>
-                                                <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                                                <div style={{ fontSize: 16, fontWeight: 500, color: '#0f172a' }}>
                                                     {record.qty || 0}
                                                 </div>
                                             </div>
@@ -546,7 +528,7 @@ const ShortExpMobileView = ({
                 <div
                     style={{
                         position: 'fixed',
-                        bottom: 0,
+                        bottom: 50,
                         left: 0,
                         right: 0,
                         background: '#ffffff',
@@ -601,7 +583,39 @@ const ShortExpMobileView = ({
                             </Button>
                         )}
                     </div>
-                    <SafeArea position="bottom" />
+                    {/* <SafeArea position="bottom" /> */}
+                </div>
+
+                {/* Floating Add / Entry + Button */}
+                <div
+                    onClick={() => navigate('/shortexp-entry')}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Add Short Expiry Entry"
+                    style={{
+                        position: 'fixed',
+                        right: 18,
+                        bottom: 114,
+                        zIndex: 100,
+                        width: 52,
+                        height: 52,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #1677ff 0%, #0958d9 100%)',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 6px 20px rgba(22, 119, 255, 0.42), 0 2px 6px rgba(0,0,0,0.12)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        WebkitTapHighlightColor: 'transparent',
+                    }}
+                    onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)'; }}
+                    onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                    onTouchStart={(e) => { e.currentTarget.style.transform = 'scale(0.92)'; }}
+                    onTouchEnd={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                    <PlusOutlined style={{ fontSize: 24, fontWeight: 'bold' }} />
                 </div>
             </div>
         </ConfigProvider>

@@ -63,13 +63,13 @@ const IndentMobileView = ({
             display: 'flex',
             flexDirection: 'column',
             minHeight: '100%',
-            paddingBottom: '24px',
+            paddingBottom: '80px',
             background: '#f8fafc'
         }}>
             {/* Header */}
             <div style={{
                 position: 'sticky',
-                top: 20,
+                top: 0,
                 zIndex: 10,
                 background: '#ffffff',
                 borderBottom: '1px solid #f0f0f0',
@@ -83,11 +83,11 @@ const IndentMobileView = ({
                             display: 'inline-flex',
                             alignItems: 'center',
                             padding: '3px 8px',
-                            background: '#e6f4ff',
-                            color: '#1677ff',
+                            background: getUnitColor(unit),
+                            color: '#ffffff',
                             borderRadius: 12,
                             fontSize: 11,
-                            fontWeight: 600
+                            fontWeight: 700
                         }}>
                             {unit}
                         </span>

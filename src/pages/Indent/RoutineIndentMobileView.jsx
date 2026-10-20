@@ -78,13 +78,13 @@ const RoutineIndentMobileView = ({
             display: 'flex',
             flexDirection: 'column',
             minHeight: '100%',
-            paddingBottom: '88px', // Space for sticky bottom action bar
+            paddingBottom: '145px', // Space for sticky bottom action bar + persistent TabBar
             background: '#f8fafc'
         }}>
             {/* Mobile Header / Navigation */}
             <div style={{
                 position: 'sticky',
-                top: 64,
+                top: 0,
                 zIndex: 10,
                 background: '#ffffff',
                 borderBottom: '1px solid #f0f0f0',
@@ -406,7 +406,6 @@ const RoutineIndentMobileView = ({
                     borderRadius: 14,
                     padding: '12px 14px',
                     border: '1px solid #fed7aa',
-                    background: '#fffaf5',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -505,7 +504,7 @@ const RoutineIndentMobileView = ({
             {/* Sticky Bottom Thumb-Zone Navigation Bar */}
             <div style={{
                 position: 'fixed',
-                bottom: 0,
+                bottom: 50,
                 left: 0,
                 right: 0,
                 zIndex: 100,
