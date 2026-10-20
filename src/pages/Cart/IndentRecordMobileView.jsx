@@ -794,7 +794,7 @@ const IndentRecordMobileView = ({
                                 <FileExcelOutlined /> Excel
                             </Button>
                         </div>
-                        <SafeArea position="bottom" />
+                        {/*  <SafeArea position="bottom" />*/}
                     </div>
                 )}
 
