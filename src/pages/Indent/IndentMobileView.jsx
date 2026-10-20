@@ -69,7 +69,7 @@ const IndentMobileView = ({
             {/* Header */}
             <div style={{
                 position: 'sticky',
-                top: 0,
+                top: 20,
                 zIndex: 10,
                 background: '#ffffff',
                 borderBottom: '1px solid #f0f0f0',

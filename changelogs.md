@@ -1,5 +1,175 @@
 # Changelog
 
+
+### What Was Done
+
+#### Short Expiry Entry Mobile Adaptation: [ShortExpEntry.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntry.jsx)
+Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
+1. **Shared Headless Logic ([useShortExpEntry.js](file:///d:/dev/arise/src/pages/Shortexp/useShortExpEntry.js))**:
+   - Manages Rak selection, inventory items iteration, batch saving, and instant drug search.
+   - Pure JS implementation without raw JSX.
+2. **Desktop View ([ShortExpEntryDesktopView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntryDesktopView.jsx))**:
+   - 100% of the desktop wizard preserved for screens $\ge 768\text{px}$.
+   - Card setup with Ant Design Select, Search & Edit Specific Drug Card, and `ShortExpTabs` editable card tabs.
+3. **Mobile Touch View ([ShortExpEntryMobileView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntryMobileView.jsx))**:
+   - **Setup View**: Sticky `NavBar` with unit badge, native `Picker` wheel for choosing Rak, and instant SearchBar with tap-to-edit drug cards opening [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx).
+   - **Active Recording View**: Sticky header with Rak tag and item counter, progress bar, current drug info card with PKU badge, and `MobileBatchEditor` (`CapsuleTabs`, `-` / `+` quantity steppers, `DatePicker` popup for expiry date, and optional remarks).
+   - Sticky bottom navigation bar with `[ < Previous ]` and `[ Next Item > ]` / `[ Finish & Return ✓ ]`.
+4. **Thin Coordinator ([ShortExpEntry.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpEntry.jsx))**:
+   - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
+
+#### Short Expiry Archive Mobile Adaptation: [ShortExpArchive.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchive.jsx)
+Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
+1. **Shared Headless Logic ([useShortExpArchive.js](file:///d:/dev/arise/src/pages/Shortexp/useShortExpArchive.js))**:
+   - Manages archive dates fetching, date selection, archived drugs loading, item search, and Excel spreadsheet export (`xlsx`).
+   - Pure JS implementation without raw JSX.
+2. **Desktop View ([ShortExpArchiveDesktopView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchiveDesktopView.jsx))**:
+   - 100% of the desktop Ant Design table experience preserved for screens $\ge 768\text{px}$.
+   - Full table with 6M..1M monthly breakdown, Ant Design Select for dates, and Export Excel button.
+3. **Mobile Touch View ([ShortExpArchiveMobileView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchiveMobileView.jsx))**:
+   - Sticky `NavBar` with unit badge and top Excel export trigger.
+   - Touch date selector pill opening a native `Picker` wheel for archive dates.
+   - Real-time `SearchBar` for drug name, batch no, or PKU.
+   - Touch cards with batch badges, PKU tags, shelf row, total quantity, and archiver name.
+   - Mobile stepper pagination and sticky bottom summary bar.
+4. **Thin Coordinator ([ShortExpArchive.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpArchive.jsx))**:
+   - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
+
+
+
+#### Admin Menu Page Mobile Adaptation: [AdminMenu.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenu.jsx)
+Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
+1. **Shared Headless Logic ([useAdminMenu.js](file:///d:/dev/arise/src/pages/Admin/useAdminMenu.js))**:
+   - Manages tab navigation state and full database Excel export across Inventory and Indent records.
+   - Zero raw JSX in hook to ensure clean compilation.
+2. **Desktop View ([AdminMenuDesktopView.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenuDesktopView.jsx))**:
+   - 100% of the desktop Ant Design tabs preserved for screens $\ge 768\text{px}$.
+   - User Management table, Inventory settings, Audit logs table, dbdiagram iframe, and System Values cards.
+3. **Mobile Touch View ([AdminMenuMobileView.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenuMobileView.jsx))**:
+   - Sticky header with `NavBar`, title, back navigation to `/home`, and top `Export` button.
+   - Smooth `CapsuleTabs` touch navigation (`Users`, `Inventory`, `Audit`, `Schema`, `Values`).
+   - Mobile User Management with instant search bar, `+ New User` button, touch user cards, and slide-up edit/create modals.
+   - Mobile Audit Logs with real-time search, refresh action, and color-coded event badges.
+   - Mobile System Values with horizontal sub-section pills, color dot indicators, and streamlined add/edit forms.
+   - Mobile DB Schema viewer container with responsive iframe.
+4. **Thin Coordinator ([AdminMenu.jsx](file:///d:/dev/arise/src/pages/Admin/AdminMenu.jsx))**:
+   - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
+
+
+
+#### Short Expiry Page Mobile Adaptation: [ShortExpPage.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpPage.jsx)
+Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
+1. **Shared Headless Logic ([useShortExpPage.js](file:///d:/dev/arise/src/pages/Shortexp/useShortExpPage.js))**:
+   - Manages short expiry items loading for the active unit (`OPD`, etc.), item normalization, and expiry date sorting.
+   - Provides live search filtering (drug name, batch no, PKU) and urgency filters (`critical` < 30 days, `warning` < 90 days).
+   - Preserves 6M/5M/4M/3M/2M/1M monthly breakdown Excel export (`xlsx`).
+   - Manages Issuer archival & database clearing workflow.
+   - Zero raw JSX in hook to prevent esbuild compilation issues.
+2. **Desktop View ([ShortExpDesktopView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpDesktopView.jsx))**:
+   - 100% of the original Ant Design table experience preserved for screens $\ge 768\text{px}$.
+   - Horizontal table with fixed left column, monthly countdown columns, pagination, and `onRow` click handler.
+3. **Mobile Touch View ([ShortExpMobileView.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpMobileView.jsx))**:
+   - Sticky header with `NavBar`, active unit badge, `+ Entry` shortcut button, and integrated `SearchBar`.
+   - Urgency filter pills with live counts (`All`, `Critical <30d` with red indicator, `Upcoming <90d` with amber indicator).
+   - High-contrast touch cards featuring color-coded urgency borders, batch tags, days-left badges, shelf row, and bold total quantity counters.
+   - One-tap card click triggers [ShortExpModal.jsx](file:///d:/dev/arise/src/components/ShortExpModal.jsx) (which routes to touch bottom sheet [ShortExpMobilePopup.jsx](file:///d:/dev/arise/src/components/ShortExpMobilePopup.jsx)).
+   - Sticky bottom action bar with Excel export and Issuer archive trigger with `Dialog.confirm` and `SafeArea`.
+4. **Thin Coordinator ([ShortExpPage.jsx](file:///d:/dev/arise/src/pages/Shortexp/ShortExpPage.jsx))**:
+   - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
+
+
+
+#### Indent Record Page Mobile Adaptation: [IndentRecordPage.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordPage.jsx)
+Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
+1. **Shared Headless Logic ([useIndentRecord.js](file:///d:/dev/arise/src/pages/Cart/useIndentRecord.js))**:
+   - Manages indent records and adhoc requests fetching, item deduplication, and combined sorting.
+   - Centralizes filtering by date range, indenter user, and debounced item name search.
+   - Preserves full Kew.PS-8 PDF generation (`jsPDF` + `jspdf-autotable`) and Excel spreadsheet export (`xlsx`).
+   - Handles multi-row selection, batch export, and pagination calculations.
+2. **Desktop View ([IndentRecordDesktopView.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordDesktopView.jsx))**:
+   - 100% of the original Ant Design desktop table preserved for screens $\ge 768\text{px}$.
+   - Multi-column sorters, expandable table rows, `RangePicker`, and `Select` dropdown.
+3. **Mobile Touch View ([IndentRecordMobileView.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordMobileView.jsx))**:
+   - Sticky header with `NavBar`, unit badge, and search bar.
+   - Filter pills with native wheel `Picker` for indenters and quick date range presets (`Today`, `7 Days`, `This Month`, `Custom`).
+   - Touch cards per record with status tags, metadata badges, and expandable item rows.
+   - Individual 1-tap Kew.PS-8 PDF preview per record.
+   - Floating batch action bottom bar for multi-selected Kew.PS-8 PDF and Excel export with `SafeArea`.
+4. **Thin Coordinator ([IndentRecordPage.jsx](file:///d:/dev/arise/src/pages/Cart/IndentRecordPage.jsx))**:
+   - Dynamic view routing at the `768px` breakpoint via `useIsMobile`.
+
+
+
+#### Cart Page Mobile Adaptation: [CartPage.jsx](file:///d:/dev/arise/src/pages/Cart/CartPage.jsx)
+Implemented the "Share Logic, Split the View" pattern with `antd-mobile` alongside desktop Ant Design:
+1. **Shared Headless Logic ([useCartPage.js](file:///d:/dev/arise/src/pages/Cart/useCartPage.js))**:
+   - Manages submitted cart session fetching, item deduplication, and selection.
+   - Handles item quantity modification and clearance dialogs.
+   - Automates PhIS batch bot execution with real-time SSE event streaming and abort handling.
+   - Kew.PS-8 PDF multi-page generation and live preview with `jsPDF` and `jspdf-autotable`.
+2. **Desktop View ([CartDesktopView.jsx](file:///d:/dev/arise/src/pages/Cart/CartDesktopView.jsx))**:
+   - Full-width desktop collapsible panels, bulk selection checkboxes, and item tables.
+   - PhIS bot execution modal with terminal-style logs and success report dialogs.
+3. **Mobile Touch View ([CartMobileView.jsx](file:///d:/dev/arise/src/pages/Cart/CartMobileView.jsx))**:
+   - Touch cards per session with expandable item lists and visual status tags.
+   - One-tap quantity adjustment bottom sheet (`Popup`) with increment/decrement steppers.
+   - Mobile PhIS automation modal with live log terminal and easy-copy Indent number button.
+   - Floating sticky bottom bar for batch Kew.PS-8 PDF export and select all.
+4. **Thin Coordinator ([CartPage.jsx](file:///d:/dev/arise/src/pages/Cart/CartPage.jsx))**:
+   - Seamless dynamic routing between desktop and mobile based on `useIsMobile(768)`.
+
+
+#### 1. Extracted Shared Logic: [useIndentPage.js](file:///d:/dev/arise/src/pages/Indent/useIndentPage.js)
+Centralized 100% of the inventory loading, filtering, pagination, and modal selection logic:
+- Fetches full departmental inventory for the active unit (`OPD`, `IPD`, `ED`, etc.).
+- Dynamically extracts unique shelf rows (`indentRows`) and sources (`indentSources`).
+- Manages multi-dimensional filtering (live search query, shelf row, and source).
+- Handles pagination calculations (`paginatedDrugs`, `totalPages`, `handlePageChange`).
+- Manages drug selection and indent modal visibility.
+
+#### 2. Preserved Desktop Experience: [IndentDesktopView.jsx](file:///d:/dev/arise/src/pages/Indent/IndentDesktopView.jsx)
+Maintains the complete original Ant Design desktop layout for screens $\ge 768\text{px}$:
+- Table and List view switcher (`TableOutlined`, `UnorderedListOutlined`).
+- Desktop Table with multi-column sorting, pagination, and horizontal scroll.
+- Responsive right margin offset for the desktop side drawer.
+
+#### 3. Created Mobile Touch Experience: [IndentMobileView.jsx](file:///d:/dev/arise/src/pages/Indent/IndentMobileView.jsx)
+Built a high-performance, touch-first catalog interface with `antd-mobile`:
+- **Sticky Header**: `NavBar` with department unit badge (`OPD`) and integrated `SearchBar` for quick search by drug name, item code, PKU, or row.
+- **Filter Pills with Native Wheel Pickers**:
+  - **Shelf Row Pill**: Tapping opens an `antd-mobile` `Picker` wheel to filter by shelf.
+  - **Source Pill**: Tapping opens a `Picker` wheel to filter by source (`STORE`, `SUBSTORE`, etc.).
+  - **Clear Filters Tag**: One-tap button to reset all filters.
+- **Touch Drug Cards**:
+  - Drug name with warm amber `PKU` tag, unit, and purchase type badges.
+  - Clear stock indicators: `Max: X` | `Bal: Y` with auto-calculated `Suggested: Z`.
+  - Prominent **+ Indent** button / whole card click target.
+- **Mobile Stepper Pagination**: Compact, thumb-friendly `[Prev]` and `[Next]` pagination bar with current page indicator.
+
+#### 4. Upgraded Indent Drawer to Mobile Bottom Sheet: [IndentMobilePopup.jsx](file:///d:/dev/arise/src/pages/Indent/IndentMobilePopup.jsx) & [IndentModal.jsx](file:///d:/dev/arise/src/pages/Indent/IndentModal.jsx)
+Previously, [IndentModal.jsx](file:///d:/dev/arise/src/pages/Indent/IndentModal.jsx) used an unmasked desktop side drawer (`width={500}`) that overflowed portrait mobile screens.
+- **Desktop**: Retains the existing side `Drawer`.
+- **Mobile**: Automatically switches via `useIsMobile(768)` to a slide-up bottom sheet (`Popup`):
+  - Drug summary card (Name, PKU, Unit, Shelf Row, Purchase Type).
+  - Quota vs Balance with `NIL (0)`, `MAX (quota)`, and `-` / `+` steppers.
+  - Auto-calculated Indent Quantity with `-` and `+` adjustment buttons.
+  - Optional Remarks `TextArea` with character counter.
+  - Sticky bottom action buttons with `SafeArea` (`Cancel` and `Add to Cart`).
+
+#### 5. Connected the Coordinator: [IndentPage.jsx](file:///d:/dev/arise/src/pages/Indent/IndentPage.jsx)
+```jsx
+const IndentPage = () => {
+    const isMobile = useIsMobile(768);
+    const indentPageState = useIndentPage();
+
+    return isMobile ? (
+        <IndentMobileView {...indentPageState} />
+    ) : (
+        <IndentDesktopView {...indentPageState} />
+    );
+};
+```
+
 ## \[Unreleased\] - 2026-10-19
 
 ### Added

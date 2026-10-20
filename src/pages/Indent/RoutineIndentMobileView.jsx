@@ -84,7 +84,7 @@ const RoutineIndentMobileView = ({
             {/* Mobile Header / Navigation */}
             <div style={{
                 position: 'sticky',
-                top: 0,
+                top: 64,
                 zIndex: 10,
                 background: '#ffffff',
                 borderBottom: '1px solid #f0f0f0',
