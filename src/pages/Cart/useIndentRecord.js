@@ -83,7 +83,8 @@ export const useIndentRecord = () => {
                 const groupedRequests = requestsData.reduce((acc, req) => {
                     const profileName = req.profiles?.name || 'Unknown Indenter';
                     const dateKey = dayjs(req.created_at).format('YYYY-MM-DD');
-                    const key = `${profileName}-${dateKey}`;
+                    const userUnit = req.user_main_unit || req.inventory_items?.main_unit || unit;
+                    const key = `${profileName}-${userUnit}-${dateKey}`;
                     if (!acc[key]) {
                         acc[key] = {
                             id: `adhoc-${key}`,
@@ -92,6 +93,7 @@ export const useIndentRecord = () => {
                             session_type: 'Urgent Indent',
                             rak: null,
                             profiles: { name: profileName },
+                            user_main_unit: userUnit,
                             isAdhocRequests: true,
                             items: []
                         };

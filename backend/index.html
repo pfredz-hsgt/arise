@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blessed Journey: Umrah Itinerary</title>
+    
+    <!-- Icons & Fonts -->
+    <link rel="stylesheet" href="https://cloudflare.com">
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Amiri:ital@1&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --emerald: #064e3b;
+            --gold: #d97706;
+            --marble: #f8fafc;
+            --charcoal: #1e293b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html {
+            scroll-behavior: smooth; /* Native smooth scroll, unbreakable on mobile */
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--marble); 
+            color: var(--charcoal);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Hero Header */
+        .hero {
+            height: 50vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(rgba(6, 78, 59, 0.85), rgba(6, 78, 59, 0.95)), 
+                        url('https://unsplash.com') center/cover no-repeat;
+            color: white;
+            padding: 20px;
+        }
+        .hero h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 10px; }
+        .hero p { font-size: 0.95rem; color: #f0fdf4; opacity: 0.9; max-width: 280px; line-height: 1.4; }
+        .arabic-calligraphy { font-family: 'Amiri', serif; font-size: 1.6rem; color: #fbbf24; margin-top: 10px; }
+
+        /* Timeline Container */
+        .timeline-container {
+            position: relative;
+            padding: 50px 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Central Timeline Track */
+        .timeline-track {
+            position: absolute;
+            left: 35px;
+            top: 50px;
+            bottom: 50px;
+            width: 4px;
+            background: #e2e8f0;
+            z-index: 1;
+            border-radius: 2px;
+        }
+        .timeline-progress {
+            position: absolute;
+            left: 0; top: 0; width: 100%; height: 0%;
+            background: linear-gradient(to bottom, var(--gold), var(--emerald));
+            border-radius: 2px;
+            transform-origin: top;
+        }
+
+        /* Day Block Card */
+        .day-card {
+            position: relative;
+            z-index: 2;
+            margin-bottom: 45px;
+            padding-left: 45px;
+            /* We handle initial opacity & transform safely via CSS to prevent flickering */
+            opacity: 0;
+            transform: translateY(20px);
+            will-change: transform, opacity;
+        }
+
+        /* Status Node Dot */
+        .day-node {
+            position: absolute;
+            left: 4px; top: 2px;
+            width: 24px; height: 24px;
+            background: white;
+            border: 3px solid #cbd5e1;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        /* State toggled cleanly by GSAP */
+        .day-card.active .day-node {
+            border-color: var(--gold);
+            background: var(--emerald);
+            box-shadow: 0 0 10px rgba(217, 119, 6, 0.5);
+        }
+
+        /* Inner Content Styling */
+        .day-tag {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            color: var(--gold); letter-spacing: 1px; margin-bottom: 4px;
+        }
+        .day-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+        .location-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.8rem; background: #e6f4ea; color: var(--emerald);
+            padding: 3px 10px; border-radius: 12px; font-weight: 600; margin-bottom: 12px;
+        }
+        .day-body { font-size: 0.95rem; line-height: 1.5; color: #475569; }
+        
+        .activities-list { list-style: none; margin-top: 10px; }
+        .activities-list li {
+            font-size: 0.9rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; color: #334155;
+        }
+        .activities-list li i { color: var(--emerald); }
+    </style>
+</head>
+<body>
+
+    <!-- Hero Screen Section -->
+    <header class="hero">
+        <p>الْلَّهُمَّ لَبَّيْكَ عُمْرَةً</p>
+        <h1>Our Blessed Journey</h1>
+        <p>A spiritual guide through Madinah, Taif, and the Holy City of Makkah</p>
+        <div class="arabic-calligraphy">Umrah 1448 H</div>
+    </header>
+
+    <!-- Scrollable Vertical Timeline -->
+    <main class="timeline-container">
+        <div class="timeline-track">
+            <div class="timeline-progress"></div>
+        </div>
+
+        <!-- Day 1: Madinah -->
+        <article class="day-card">
+            <div class="day-node"></div>
+            <div class="day-tag">Day 01 - Arrival</div>
+            <h2 class="day-title">En Route to the Prophet's City</h2>
+            <div class="location-badge"><i class="bi bi-geo-alt-fill"></i> Madinah Al-Munawwarah</div>
+            <p class="day-body">Arrive in the serene sanctuary of Madinah. Check into the hotel and prepare for internal peace before presenting salutations.</p>
+            <ul class="activities-list">
+                <li><i class="bi bi-check2-circle"></i> Hotel Check-in</li>
+                <li><i class="bi bi-check2-circle"></i> First prayers at Al-Masjid an-Nabawi</li>
+                <li><i class="bi bi-check2-circle"></i> Greeting Rasulullah ﷺ at the Rawdah</li>
+            </ul>
+        </article>
+
+        <!-- Day 2: Madinah Ziyarah -->
+        <article class="day-card">
+            <div class="day-node"></div>
+            <div class="day-tag">Day 02 - Exploration</div>
+            <h2 class="day-title">Historical Ziyarah</h2>
+            <div class="location-badge"><i class="bi bi-geo-alt-fill"></i> Madinah Sites</div>
+            <p class="day-body">Tracing early Islamic historical landmarks around the outskirts of the illuminated city.</p>
+            <ul class="activities-list">
+                <li><i class="bi bi-check2-circle"></i> Praying at Masjid Quba</li>
+                <li><i class="bi bi-check2-circle"></i> Visiting the Martyrs of Mount Uhud</li>
+            </ul>
+        </article>
+
+        <!-- Day 3: Taif Excursion -->
+        <article class="day-card">
+            <div class="day-node"></div>
+            <div class="day-tag">Day 03 - Transition</div>
+            <h2 class="day-title">The Cool Heights of Taif</h2>
+            <div class="location-badge"><i class="bi bi-geo-alt-fill"></i> Taif</div>
+            <p class="day-body">Travel up the mountain passes into Taif for a crisp daytime historical visit, learning about patience and perseverance before entering Ihram state.</p>
+            <ul class="activities-list">
+                <li><i class="bi bi-check2-circle"></i> Masjid Abdullah Ibn Abbas</li>
+                <li><i class="bi bi-check2-circle"></i> Rose factory & mountain experience</li>
+                <li><i class="bi bi-check2-circle"></i> Assuming Ihram at Miqat Qarn al-Manazil</li>
+            </ul>
+        </article>
+
+        <!-- Day 4: Makkah Umrah -->
+        <article class="day-card">
+            <div class="day-node"></div>
+            <div class="day-tag">Day 04 - Fulfillment</div>
+            <h2 class="day-title">Performing the Umrah Rituality</h2>
+            <div class="location-badge"><i class="bi bi-geo-alt-fill"></i> Makkah Al-Mukarramah</div>
+            <p class="day-body">Arrive in Makkah to perform the core pillars of Umrah. Keep intentions sincere during Tawaaf and Sa'ee.</p>
+            <ul class="activities-list">
+                <li><i class="bi bi-check2-circle"></i> First sight of the Holy Kaaba</li>
+                <li><i class="bi bi-check2-circle"></i> Completion of Tawaaf & Sa'ee</li>
+                <li><i class="bi bi-check2-circle"></i> Halq / Taqsir (Shaving or Cutting Hair)</li>
+            </ul>
+        </article>
+    </main>
+
+    <!-- Essential Scripts via CDN -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+
+    <script>
+        // Safely register ScrollTrigger with GSAP
+        gsap.registerPlugin(ScrollTrigger);
+
+        // 1. Unbreakable Line Progress Animation (Tied directly to container scroll)
+        gsap.to(".timeline-progress", {
+            scrollTrigger: {
+                trigger: ".timeline-container",
+                start: "top 40%",
+                end: "bottom 60%",
+                scrub: 0.5 // Minimal layout lag to ensure phone touch smoothness
+            },
+            height: "100%"
+        });
+
+        // 2. Card Step Animations
+        gsap.utils.toArray('.day-card').forEach((card) => {
+            gsap.to(card, {
+                scrollTrigger: {
+                    trigger: card,
+                    start: "top 80%", // Cards animate smoothly as they appear from the bottom
+                    end: "top 30%",
+                    toggleActions: "play none none reverse",
+                    onEnter: () => card.classList.add('active'),
+                    onLeaveBack: () => card.classList.remove('active')
+                },
+                y: 0,
+                opacity: 1,
+                duration: 0.4,
+                ease: "power1.out"
+            });
+        });
+    </script>
+</body>
+</html>

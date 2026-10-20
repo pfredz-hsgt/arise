@@ -1,5 +1,59 @@
 # Changelog
 
+### Summary of Changes v1.1.6
+
+Implemented a dedicated touch-optimized mobile view for the Inventory page ([`src/pages/Admin/InventoryTable.jsx`](/arise/src/pages/Admin/InventoryTable.jsx)), replacing the wide desktop table on mobile devices with modern touch-friendly cards, search, filters, and mobile-adapted modals.
+
+### Changes Implemented:
+
+1. **Coordinator Refactoring ([`InventoryTable.jsx`](/arise/src/pages/Admin/InventoryTable.jsx))**:
+   - Refactored `InventoryTable` into a thin coordinator adhering to the codebase convention (`useIsMobile(768)`).
+   - Renders touch-optimized [`InventoryMobileView.jsx`](/arise/src/pages/Admin/InventoryMobileView.jsx) on mobile viewports (< 768px).
+   - Preserves 100% of the desktop table functionality without regression via [`InventoryDesktopView.jsx`](/arise/src/pages/Admin/InventoryDesktopView.jsx) on desktop (>= 768px).
+
+2. **Shared State & Logic ([`useInventoryTable.js`](/arise/src/pages/Admin/useInventoryTable.js))**:
+   - Extracted shared state management, real-time search filtering, lookup fetches (`units`, `sources`, `types`, `purchasetypes`, `stdkts`), and CRUD operations (`handleAdd`, `handleEdit`, `handleDelete`, `handleSubmit`).
+   - Added multi-criteria filtering (Main Unit, Shelf Row, Indent Source, Item Type, Purchase Type) and sorting (Name A-Z/Z-A, Shelf Location, Balance High/Low).
+
+3. **Touch-First Mobile Interface ([`InventoryMobileView.jsx`](/arise/src/pages/Admin/InventoryMobileView.jsx))**:
+   - **Top Search & Action Bar**: Real-time `antd-mobile` SearchBar with quick clear and pill-shaped `+ New Drug` button.
+   - **Department Filter Pills**: Horizontal touch-scrollable unit chips (`All Units`, `OPD`, `IPD`, `ED`) with active department colors.
+   - **Advanced Filter & Sort Popups**: Bottom sheet modals for multi-attribute filtering (Shelf Row, Source, Type, Purchase Type) and fast sort order switching.
+   - **Interactive Drug Cards**:
+     - Prominent drug name and department badge.
+     - Item code, PKU, and convert SKU tags.
+     - Location capsule (`Row`, `Tingkat`, `Petak`) and color-coded stock balance (`Bal: X / Max: Y`).
+     - Classification tags with standard color mappings.
+     - Quick Edit button and Popconfirm-protected Delete button.
+   - **Mobile Pagination**: 15 items per page with Prev/Next controls and page indicators.
+   - **Mobile Add/Edit Modal**: Centered touch modal with scrollable form body and sticky bottom action buttons (`Update Drug`, `Delete`, `Cancel`), preventing screen cutoffs on mobile viewports.
+
+4. **Container Integration ([`AdminMenuMobileView.jsx`](/arise/src/pages/Admin/AdminMenuMobileView.jsx))**:
+   - Seamlessly integrated `<InventoryTable />` into Tab 2 ("Inventory") without artificial card nesting, matching the visual rhythm of Users and Audit tabs.
+
+---
+
+### Summary of Changes v1.1.5
+
+Added an exception allowing the **Issuer** role with `main_unit = 'OPD'` to view and process cart items and sessions for **ED** (Emergency Dept) alongside **OPD**, because ED is operationally part of OPD, while maintaining **IPD** (Inpatient Dept) strictly isolated and keeping the **Indenter** role scoped strictly to their respective units.
+
+### Changes Implemented:
+
+1. **Backend Unit Resolution (`indents.js`)**:
+   - Implemented `resolveUnits(req, requestedUnit)` in [`backend/routes/indents.js`](/arise/backend/routes/indents.js).
+   - If user is `Issuer` and effective unit is `'OPD'`, expands target units to `['OPD', 'ED']` using Postgres array matching `u.main_unit = ANY($1::text[])`.
+   - Updated `GET /indents/cart`, `GET /indents/records`, `GET /indents/approved-dates`, `GET /indents/approved`, and `GET /indents/`.
+   - Maintained strict isolation for `IPD` (`['IPD']`) and kept indent validation in `indent_items.js` and `indents.js` untouched for `Indenter` role.
+
+2. **Frontend Cart State Management (`useCartPage.js` & `useIndentRecord.js`)**:
+   - Preserved `user_main_unit` on ad-hoc request groups in [`useCartPage.js`](/arise/src/pages/Cart/useCartPage.js) and [`useIndentRecord.js`](/arise/src/pages/Cart/useIndentRecord.js).
+   - Added client-side `unitFilter` (`'ALL'`, `'OPD'`, `'ED'`), `unitCounts`, and `filteredSessions` memoization for OPD Issuers.
+
+3. **Cart UI Views (`CartDesktopView.jsx` & `CartMobileView.jsx`)**:
+   - **Desktop View**: Header displays both `OPD` and `ED` tags with descriptive subtitle ("... from OPD & ED waiting for approval"), added `Segmented` unit filter tabs (`All`, `OPD`, `ED`), and displays session `user_main_unit` tags on each session panel.
+   - **Mobile View**: NavBar right displays `OPD` and `ED` badges for OPD Issuers, added interactive department filter bar (`All`, `OPD`, `ED`), and displays `user_main_unit` badge on mobile session cards.
+
+---
 
 ### Summary of Changes v1.1.4
 

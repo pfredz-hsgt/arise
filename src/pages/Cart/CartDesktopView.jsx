@@ -12,6 +12,7 @@ import {
     Checkbox,
     InputNumber,
     Divider,
+    Segmented,
     message
 } from 'antd';
 import {
@@ -147,6 +148,9 @@ const CartDesktopView = ({
     unit,
     loading,
     sessions,
+    unitFilter,
+    setUnitFilter,
+    unitCounts,
     selectedSessions,
     setSelectedSessions,
     editModalVisible,
@@ -168,6 +172,8 @@ const CartDesktopView = ({
 }) => {
     if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" /></div>;
 
+    const isOpd = unit === 'OPD';
+
     return (
         <div className="cart-page">
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -175,11 +181,32 @@ const CartDesktopView = ({
                     <div>
                         <Title level={3} style={{ margin: 0 }}>
                             Indent Cart
-                            <Tag color={getUnitColor(unit)} style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}>{unit}</Tag>
+                            {isOpd ? (
+                                <>
+                                    <Tag color={getUnitColor('OPD')} style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}>OPD</Tag>
+                                    <Tag color={getUnitColor('ED')} style={{ marginLeft: 4, verticalAlign: 'middle', fontWeight: 600 }}>ED</Tag>
+                                </>
+                            ) : (
+                                <Tag color={getUnitColor(unit)} style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}>{unit}</Tag>
+                            )}
                         </Title>
-                        <Text type="secondary">{sessions.length} submitted session(s) from {unit} waiting for approval</Text>
+                        <Text type="secondary">
+                            {sessions.length} submitted session(s) {isOpd ? 'from OPD & ED' : `from ${unit}`} waiting for approval
+                        </Text>
                     </div>
                     <Space wrap>
+                        {isOpd && unitCounts && (
+                            <Segmented
+                                value={unitFilter}
+                                onChange={setUnitFilter}
+                                options={[
+                                    { label: `All (${unitCounts.all})`, value: 'ALL' },
+                                    { label: `OPD (${unitCounts.opd})`, value: 'OPD' },
+                                    { label: `ED (${unitCounts.ed})`, value: 'ED' },
+                                ]}
+                                style={{ marginRight: 8 }}
+                            />
+                        )}
                         <Button
                             icon={<EyeOutlined style={{ fontSize: 19 }} />}
                             onClick={() => processPDFExport('preview')}
@@ -221,6 +248,11 @@ const CartDesktopView = ({
                                                 />
                                             </span>
                                             <Text strong>{session.profiles?.name}</Text>
+                                            {session.user_main_unit && (
+                                                <Tag color={getUnitColor(session.user_main_unit)} style={{ fontWeight: 600, margin: 0 }}>
+                                                    {session.user_main_unit}
+                                                </Tag>
+                                            )}
                                             <Tag color="#d46b08">{dayjs(session.created_at).format('DD/MM/YYYY HH:mm')}</Tag>
                                             <Tag variant='outlined' color={session.session_type === 'Urgent Indent' ? 'red' : 'geekblue'}>{session.session_type}</Tag>
                                             {session.rak && <Tag color="purple">Rak: {session.rak}</Tag>}

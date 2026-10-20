@@ -7,11 +7,24 @@ import { decrypt } from '../utils/crypto.js';
 const router = express.Router();
 const activePhisProcesses = new Map();
 
+// Helper to resolve permitted main_units based on role and requested unit
+// Role Issuer from OPD can see items for ED as well (ED is part of OPD)
+// IPD is strictly separated. Indenters remain restricted to their own unit.
+function resolveUnits(req, requestedUnit) {
+    const unit = requestedUnit || req.user.main_unit || 'OPD';
+    if (req.user.role === 'Issuer') {
+        if (unit === 'OPD' || unit === 'ALL_OPD_ED') {
+            return ['OPD', 'ED'];
+        }
+    }
+    return [unit];
+}
+
 // Get cart data for Issuer
 router.get('/cart', authenticateToken, async (req, res) => {
     try {
-        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
         const isAll = req.query.all_units === 'true';
+        const targetUnits = resolveUnits(req, req.query.main_unit);
 
         let sessionQuery = `
             SELECT s.*, u.name as profile_name, u.phis_username, u.phis_password, u.main_unit as user_main_unit
@@ -21,8 +34,8 @@ router.get('/cart', authenticateToken, async (req, res) => {
         `;
         const sessionParams = [];
         if (!isAll) {
-            sessionParams.push(unit);
-            sessionQuery += ` AND u.main_unit = $${sessionParams.length}`;
+            sessionParams.push(targetUnits);
+            sessionQuery += ` AND u.main_unit = ANY($${sessionParams.length}::text[])`;
         }
         sessionQuery += ` ORDER BY s.created_at ASC`;
         const sessionsResult = await pool.query(sessionQuery, sessionParams);
@@ -48,8 +61,8 @@ router.get('/cart', authenticateToken, async (req, res) => {
         `;
         const requestParams = [];
         if (!isAll) {
-            requestParams.push(unit);
-            requestsQuery += ` AND (inv.main_unit = $${requestParams.length} OR (inv.main_unit IS NULL AND u.main_unit = $${requestParams.length}))`;
+            requestParams.push(targetUnits);
+            requestsQuery += ` AND (inv.main_unit = ANY($${requestParams.length}::text[]) OR (inv.main_unit IS NULL AND u.main_unit = ANY($${requestParams.length}::text[])))`;
         }
         requestsQuery += ` ORDER BY ir.created_at ASC`;
 
@@ -68,14 +81,14 @@ router.get('/cart', authenticateToken, async (req, res) => {
 // Get records for IndentRecordPage
 router.get('/records', authenticateToken, async (req, res) => {
     try {
-        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
         const isAll = req.query.all_units === 'true';
+        const targetUnits = resolveUnits(req, req.query.main_unit);
 
         let usersQuery = 'SELECT id, name, main_unit FROM users';
         const userParams = [];
         if (!isAll) {
-            userParams.push(unit);
-            usersQuery += ` WHERE main_unit = $${userParams.length}`;
+            userParams.push(targetUnits);
+            usersQuery += ` WHERE main_unit = ANY($${userParams.length}::text[])`;
         }
         usersQuery += ' ORDER BY name';
         const usersResult = await pool.query(usersQuery, userParams);
@@ -88,8 +101,8 @@ router.get('/records', authenticateToken, async (req, res) => {
         `;
         const sessionParams = [];
         if (!isAll) {
-            sessionParams.push(unit);
-            sessionsQuery += ` AND u.main_unit = $${sessionParams.length}`;
+            sessionParams.push(targetUnits);
+            sessionsQuery += ` AND u.main_unit = ANY($${sessionParams.length}::text[])`;
         }
         sessionsQuery += ` ORDER BY s.created_at DESC`;
         const sessionsResult = await pool.query(sessionsQuery, sessionParams);
@@ -115,8 +128,8 @@ router.get('/records', authenticateToken, async (req, res) => {
         `;
         const requestParams = [];
         if (!isAll) {
-            requestParams.push(unit);
-            requestsQuery += ` AND (inv.main_unit = $${requestParams.length} OR (inv.main_unit IS NULL AND u.main_unit = $${requestParams.length}))`;
+            requestParams.push(targetUnits);
+            requestsQuery += ` AND (inv.main_unit = ANY($${requestParams.length}::text[]) OR (inv.main_unit IS NULL AND u.main_unit = ANY($${requestParams.length}::text[])))`;
         }
         requestsQuery += ` ORDER BY ir.created_at DESC`;
 
@@ -135,8 +148,8 @@ router.get('/records', authenticateToken, async (req, res) => {
 // Get approved dates
 router.get('/approved-dates', authenticateToken, async (req, res) => {
     try {
-        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
         const isAll = req.query.all_units === 'true';
+        const targetUnits = resolveUnits(req, req.query.main_unit);
 
         let query = `
             SELECT ir.created_at 
@@ -147,8 +160,8 @@ router.get('/approved-dates', authenticateToken, async (req, res) => {
         `;
         const params = [];
         if (!isAll) {
-            params.push(unit);
-            query += ` AND (inv.main_unit = $${params.length} OR (inv.main_unit IS NULL AND u.main_unit = $${params.length}))`;
+            params.push(targetUnits);
+            query += ` AND (inv.main_unit = ANY($${params.length}::text[]) OR (inv.main_unit IS NULL AND u.main_unit = ANY($${params.length}::text[])))`;
         }
         query += ` ORDER BY ir.created_at DESC`;
         const result = await pool.query(query, params);
@@ -161,8 +174,8 @@ router.get('/approved-dates', authenticateToken, async (req, res) => {
 // Get approved requests in a date range
 router.get('/approved', authenticateToken, async (req, res) => {
     const { start_date, end_date } = req.query;
-    const unit = req.query.main_unit || req.user.main_unit || 'OPD';
     const isAll = req.query.all_units === 'true';
+    const targetUnits = resolveUnits(req, req.query.main_unit);
     try {
         let query = `
             SELECT ir.*, row_to_json(inv.*) as inventory_items
@@ -174,8 +187,8 @@ router.get('/approved', authenticateToken, async (req, res) => {
         `;
         const params = [start_date, end_date];
         if (!isAll) {
-            params.push(unit);
-            query += ` AND (inv.main_unit = $${params.length} OR (inv.main_unit IS NULL AND u.main_unit = $${params.length}))`;
+            params.push(targetUnits);
+            query += ` AND (inv.main_unit = ANY($${params.length}::text[]) OR (inv.main_unit IS NULL AND u.main_unit = ANY($${params.length}::text[])))`;
         }
         query += ` ORDER BY ir.created_at DESC`;
 
@@ -189,8 +202,8 @@ router.get('/approved', authenticateToken, async (req, res) => {
 // Get all indent requests with item details
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const unit = req.query.main_unit || req.user.main_unit || 'OPD';
         const isAll = req.query.all_units === 'true';
+        const targetUnits = resolveUnits(req, req.query.main_unit);
 
         let query = `
             SELECT ir.*, 
@@ -201,8 +214,8 @@ router.get('/', authenticateToken, async (req, res) => {
         `;
         const params = [];
         if (!isAll) {
-            params.push(unit);
-            query += ` WHERE (ii.main_unit = $${params.length} OR (ii.main_unit IS NULL AND u.main_unit = $${params.length}))`;
+            params.push(targetUnits);
+            query += ` WHERE (ii.main_unit = ANY($${params.length}::text[]) OR (ii.main_unit IS NULL AND u.main_unit = ANY($${params.length}::text[])))`;
         }
         query += ` ORDER BY ir.created_at DESC`;
         const result = await pool.query(query, params);

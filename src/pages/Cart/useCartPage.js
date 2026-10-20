@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { message, Modal } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
@@ -20,6 +20,7 @@ export const useCartPage = () => {
     const [loading, setLoading] = useState(true);
     const [sessions, setSessions] = useState([]);
     const [selectedSessions, setSelectedSessions] = useState([]);
+    const [unitFilter, setUnitFilter] = useState('ALL'); // 'ALL' | 'OPD' | 'ED'
 
     // Edit Modal State
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -62,18 +63,25 @@ export const useCartPage = () => {
                 })
                 .filter(sess => sess.indent_items.length > 0);
 
-            // Map indent_requests to a mock session grouped by user
+            // Map indent_requests to a mock session grouped by user and unit
             if (requestsData && requestsData.length > 0) {
                 const groupedRequests = requestsData.reduce((acc, req) => {
                     const profileName = req.profiles?.name || 'Unknown Indenter';
-                    if (!acc[profileName]) {
-                        acc[profileName] = [];
+                    const userUnit = req.user_main_unit || req.inventory_items?.main_unit || unit;
+                    const groupKey = `${profileName}_${userUnit}`;
+                    if (!acc[groupKey]) {
+                        acc[groupKey] = {
+                            profileName,
+                            userUnit,
+                            reqs: []
+                        };
                     }
-                    acc[profileName].push(req);
+                    acc[groupKey].reqs.push(req);
                     return acc;
                 }, {});
 
-                Object.entries(groupedRequests).forEach(([profileName, reqs], index) => {
+                Object.values(groupedRequests).forEach((group, index) => {
+                    const { profileName, userUnit, reqs } = group;
                     const uniqueMappedItems = new Map();
                     reqs.forEach(req => {
                         if (!uniqueMappedItems.has(req.item_id)) {
@@ -99,7 +107,7 @@ export const useCartPage = () => {
                         );
 
                     processedSessions.push({
-                        id: `adhoc-requests-${profileName}-${index}`,
+                        id: `adhoc-requests-${profileName}-${userUnit}-${index}`,
                         created_at: reqs[0].created_at,
                         session_type: 'Urgent Indent',
                         rak: null,
@@ -108,6 +116,7 @@ export const useCartPage = () => {
                             phis_username: reqs[0].profiles?.phis_username,
                             phis_password: reqs[0].profiles?.phis_password
                         },
+                        user_main_unit: userUnit,
                         indent_items: mappedItems,
                         isAdhocRequests: true,
                         profileName: profileName
@@ -522,6 +531,23 @@ export const useCartPage = () => {
         }
     };
 
+    const filteredSessions = useMemo(() => {
+        if (unit !== 'OPD' || unitFilter === 'ALL') {
+            return sessions;
+        }
+        return sessions.filter(s => (s.user_main_unit || unit) === unitFilter);
+    }, [sessions, unit, unitFilter]);
+
+    const unitCounts = useMemo(() => {
+        const counts = { all: sessions.length, opd: 0, ed: 0 };
+        sessions.forEach(s => {
+            const u = s.user_main_unit || unit;
+            if (u === 'OPD') counts.opd++;
+            else if (u === 'ED') counts.ed++;
+        });
+        return counts;
+    }, [sessions, unit]);
+
     const toggleSessionSelect = (sessionId) => {
         setSelectedSessions(prev =>
             prev.includes(sessionId)
@@ -531,10 +557,14 @@ export const useCartPage = () => {
     };
 
     const toggleSelectAll = () => {
-        if (selectedSessions.length === sessions.length) {
-            setSelectedSessions([]);
+        const currentList = filteredSessions;
+        const allSelected = currentList.length > 0 && currentList.every(s => selectedSessions.includes(s.id));
+        if (allSelected) {
+            const currentIds = new Set(currentList.map(s => s.id));
+            setSelectedSessions(prev => prev.filter(id => !currentIds.has(id)));
         } else {
-            setSelectedSessions(sessions.map(s => s.id));
+            const newSelected = new Set([...selectedSessions, ...currentList.map(s => s.id)]);
+            setSelectedSessions(Array.from(newSelected));
         }
     };
 
@@ -543,7 +573,11 @@ export const useCartPage = () => {
         user,
         profile,
         loading,
-        sessions,
+        sessions: filteredSessions,
+        allSessions: sessions,
+        unitFilter,
+        setUnitFilter,
+        unitCounts,
         selectedSessions,
         setSelectedSessions,
         editModalVisible,

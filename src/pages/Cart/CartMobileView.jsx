@@ -31,6 +31,9 @@ const CartMobileView = ({
     unit,
     loading,
     sessions,
+    unitFilter,
+    setUnitFilter,
+    unitCounts,
     selectedSessions,
     editingItem,
     setEditingItem,
@@ -162,24 +165,88 @@ const CartMobileView = ({
                     backArrow={<LeftOutlined style={{ fontSize: 16 }} />}
                     onBack={() => navigate('/home')}
                     right={
-                        <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            padding: '3px 8px',
-                            background: getUnitColor(unit),
-                            color: '#ffffff',
-                            borderRadius: 12,
-                            fontSize: 11,
-                            fontWeight: 700
-                        }}>
-                            {unit}
-                        </span>
+                        unit === 'OPD' ? (
+                            <span style={{ display: 'inline-flex', gap: 4 }}>
+                                <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '3px 7px',
+                                    background: getUnitColor('OPD'),
+                                    color: '#ffffff',
+                                    borderRadius: 12,
+                                    fontSize: 11,
+                                    fontWeight: 700
+                                }}>
+                                    OPD
+                                </span>
+                                <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '3px 7px',
+                                    background: getUnitColor('ED'),
+                                    color: '#ffffff',
+                                    borderRadius: 12,
+                                    fontSize: 11,
+                                    fontWeight: 700
+                                }}>
+                                    ED
+                                </span>
+                            </span>
+                        ) : (
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '3px 8px',
+                                background: getUnitColor(unit),
+                                color: '#ffffff',
+                                borderRadius: 12,
+                                fontSize: 11,
+                                fontWeight: 700
+                            }}>
+                                {unit}
+                            </span>
+                        )
                     }
                 >
                     <span style={{ fontWeight: 700, fontSize: 16 }}>
                         Issuer Cart
                     </span>
                 </NavBar>
+
+                {/* Mobile Department Tabs for OPD Issuer */}
+                {unit === 'OPD' && unitCounts && (
+                    <div style={{
+                        display: 'flex',
+                        padding: '8px 12px',
+                        background: '#ffffff',
+                        borderBottom: '1px solid #e2e8f0',
+                        gap: 8
+                    }}>
+                        {[
+                            { label: `All (${unitCounts.all})`, value: 'ALL' },
+                            { label: `OPD (${unitCounts.opd})`, value: 'OPD' },
+                            { label: `ED (${unitCounts.ed})`, value: 'ED' }
+                        ].map(tab => (
+                            <button
+                                key={tab.value}
+                                onClick={() => setUnitFilter(tab.value)}
+                                style={{
+                                    flex: 1,
+                                    padding: '5px 0',
+                                    fontSize: 12,
+                                    fontWeight: unitFilter === tab.value ? 700 : 500,
+                                    color: unitFilter === tab.value ? '#ffffff' : '#64748b',
+                                    background: unitFilter === tab.value ? '#1e293b' : '#f1f5f9',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Bulk Actions & Selection Bar */}
                 {sessions.length > 0 && (
@@ -288,6 +355,18 @@ const CartMobileView = ({
                                         </div>
 
                                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                            {session.user_main_unit && (
+                                                <span style={{
+                                                    background: getUnitColor(session.user_main_unit),
+                                                    color: '#ffffff',
+                                                    padding: '1px 6px',
+                                                    borderRadius: 4,
+                                                    fontSize: 10,
+                                                    fontWeight: 700
+                                                }}>
+                                                    {session.user_main_unit}
+                                                </span>
+                                            )}
                                             <span style={{
                                                 background: isUrgent ? '#fef2f2' : '#eff6ff',
                                                 color: isUrgent ? '#dc2626' : '#2563eb',

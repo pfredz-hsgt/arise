@@ -1041,11 +1041,7 @@ const AdminMenuMobileView = ({
                 {/* Main Content Area */}
                 <div style={{ padding: '12px', flex: 1 }}>
                     {currentTabKey === '1' && <MobileUserManagement />}
-                    {currentTabKey === '2' && (
-                        <div style={{ background: '#ffffff', borderRadius: 12, padding: 8, border: '1px solid #e2e8f0' }}>
-                            <InventoryTable />
-                        </div>
-                    )}
+                    {currentTabKey === '2' && <InventoryTable />}
                     {currentTabKey === '3' && <MobileAuditLogs />}
                     {currentTabKey === '4' && (
                         <div

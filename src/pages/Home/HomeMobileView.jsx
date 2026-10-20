@@ -22,7 +22,8 @@ import {
     LogoutOutlined,
     CloseOutlined,
     LockOutlined,
-    KeyOutlined
+    KeyOutlined,
+    SettingOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUnitColor } from '../../lib/colorMappings';
@@ -99,6 +100,13 @@ const HomeMobileView = ({
                 label: <span style={{ color: '#64748b', fontSize: 12 }}>{profile?.role || user?.role}</span>
             },
             { type: 'divider' },
+            profile?.role === 'Issuer' ? {
+                key: 'adminMenu',
+                icon: <SettingOutlined />,
+                label: 'Admin Menu',
+                onClick: () => navigate('/admin'),
+            } : null,
+            // 👈 This removes the 'null' if the condition is false
             {
                 key: 'editProfile',
                 icon: <UserOutlined />,
@@ -111,7 +119,7 @@ const HomeMobileView = ({
                 label: 'Sign Out',
                 onClick: handleSignOut
             }
-        ]
+        ].filter(Boolean)
     };
 
     return (
