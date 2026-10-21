@@ -22,7 +22,7 @@ export const useIndentPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState('list');
+    const [viewMode, setViewMode] = useState('table');
     const debounceTimerRef = useRef(null);
 
     const fetchDrugs = useCallback(async () => {

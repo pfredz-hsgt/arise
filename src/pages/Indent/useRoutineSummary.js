@@ -19,7 +19,7 @@ export const useRoutineSummary = () => {
     const [submitting, setSubmitting] = useState(false);
     const [sessionData, setSessionData] = useState(null);
     const [indentItems, setIndentItems] = useState([]);
-    const [viewMode, setViewMode] = useState('list');
+    const [viewMode, setViewMode] = useState('table');
 
     // Editing states for item modal / drawer
     const [editingItem, setEditingItem] = useState(null);
