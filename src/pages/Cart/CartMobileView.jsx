@@ -434,7 +434,7 @@ const CartMobileView = ({
                                         }}
                                     >
                                         <span style={{ fontWeight: 600 }}>
-                                            {session.indent_items?.length} medicine(s) to issue
+                                            {session.indent_items?.length} item(s)
                                         </span>
                                         <span style={{ color: '#1677ff', display: 'flex', alignItems: 'center', gap: 4 }}>
                                             {isExpanded ? 'Hide' : 'View'} {isExpanded ? <UpOutlined style={{ fontSize: 10 }} /> : <DownOutlined style={{ fontSize: 10 }} />}
@@ -472,9 +472,9 @@ const CartMobileView = ({
                                                         {item.inventory_items?.name}
                                                     </div>
                                                     <span style={{
-                                                        background: '#dcfce7',
-                                                        color: '#15803d',
-                                                        border: '1px solid #86efac',
+                                                        background: (item.requested_qty || 0) === 0 ? '#f3f4f6' : '#e0e7ff', // Muted gray if 0, soft indigo if > 0
+                                                        color: (item.requested_qty || 0) === 0 ? '#9ca3af' : '#4338ca',      // Faded text if 0, dark indigo if > 0
+                                                        border: (item.requested_qty || 0) === 0 ? '1px solid #e5e7eb' : '1px solid #c7d2fe',
                                                         borderRadius: 6,
                                                         padding: '1px 8px',
                                                         fontSize: 13,
@@ -483,6 +483,8 @@ const CartMobileView = ({
                                                     }}>
                                                         Qty: {item.requested_qty || 0}
                                                     </span>
+
+
                                                 </div>
 
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>

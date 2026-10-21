@@ -31,7 +31,6 @@ const MainLayout = () => {
     const location = useLocation();
     const isMobile = useIsMobile(768);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [collapsed, setCollapsed] = useState(false);
     const { user, profile, isIssuer, signOut, changePassword, updateProfile } = useAuth();
 
     const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -238,9 +237,7 @@ const MainLayout = () => {
             {/* Desktop Sidebar (hidden on mobile) */}
             {!isMobile && (
                 <Sider
-                    breakpoint="lg"
-                    collapsedWidth="0"
-                    onCollapse={setCollapsed}
+                    width={200}
                     style={{
                         overflow: 'auto',
                         height: '100vh',
@@ -248,6 +245,7 @@ const MainLayout = () => {
                         left: 0,
                         top: 0,
                         bottom: 0,
+                        zIndex: 100,
                     }}
                     className="desktop-sider"
                 >
@@ -340,7 +338,7 @@ const MainLayout = () => {
                 </Drawer>
             )}
 
-            <Layout style={{ marginLeft: isMobile ? 0 : (collapsed ? 0 : 200) }}>
+            <Layout className="main-content-layout">
                 {/* Header (hidden on mobile) */}
                 {!isMobile && (
                     <Header
@@ -381,8 +379,8 @@ const MainLayout = () => {
                         </div>
                     </Header>
                 )}
-                <Content className="site-content" style={{ margin: isMobile ? 0 : '24px 16px', overflow: 'initial' }}>
-                    <div style={{ padding: isMobile ? 0 : 24, background: isMobile ? 'transparent' : '#fff', minHeight: isMobile ? 'auto' : 360, borderRadius: isMobile ? 0 : 8 }}>
+                <Content className="site-content" style={{ margin: isMobile ? 0 : '24px 16px', overflow: 'initial', minWidth: 0 }}>
+                    <div style={{ padding: isMobile ? 0 : 24, background: isMobile ? 'transparent' : '#fff', minHeight: isMobile ? 'auto' : 360, borderRadius: isMobile ? 0 : 8, minWidth: 0 }}>
                         <Outlet />
                     </div>
                 </Content>
@@ -392,6 +390,7 @@ const MainLayout = () => {
             {isMobile && (
                 <div
                     className="mobile-tabbar-container"
+                    onContextMenu={(e) => e.preventDefault()}
                     style={{
                         position: 'fixed',
                         bottom: 0,
@@ -405,6 +404,7 @@ const MainLayout = () => {
                         WebkitUserSelect: 'none',
                         WebkitTouchCallout: 'none',
                         WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
                     }}
                 >
                     <TabBar activeKey={getActiveMobileTab(location.pathname)} onChange={handleMobileTabChange}>
@@ -531,18 +531,32 @@ const MainLayout = () => {
           -ms-user-select: none !important;
           user-select: none !important;
           -webkit-tap-highlight-color: transparent !important;
+          touch-action: manipulation !important;
         }
         @media (min-width: 768px) {
           .mobile-tabbar-container {
             display: none !important;
           }
         }
+        .main-content-layout {
+          margin-left: 0;
+          min-width: 0;
+          transition: margin-left 0.2s ease;
+        }
         @media (min-width: 992px) {
+          .main-content-layout {
+            margin-left: 200px !important;
+          }
           .mobile-menu-button {
             display: none !important;
           }
           .mobile-drawer {
             display: none !important;
+          }
+        }
+        @media (max-width: 991.98px) {
+          .main-content-layout {
+            margin-left: 0 !important;
           }
         }
         @media (max-width: 767.98px) {
@@ -561,13 +575,15 @@ const MainLayout = () => {
           .site-content {
             margin: 0 !important;
             margin-top: 0 !important;
-            padding-bottom: 56px !important;
+            padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px)) !important;
+            min-width: 0 !important;
           }
           .site-content > div {
             padding: 0 !important;
             border-radius: 0 !important;
             background: transparent !important;
             box-shadow: none !important;
+            min-width: 0 !important;
           }
         }
         @media (min-width: 768px) and (max-width: 991.98px) {
@@ -584,6 +600,10 @@ const MainLayout = () => {
           }
           .site-content {
             margin-top: 64px !important;
+            min-width: 0 !important;
+          }
+          .site-content > div {
+            min-width: 0 !important;
           }
         }
       `}</style>

@@ -1,5 +1,55 @@
 # Changelog
 
+
+
+### Hotfix 1.1.6 - Table Overlapping Sidebar Issue
+
+The issue was caused by a **state desynchronization** between Ant Design’s `<Sider>` component and the main layout’s margin in [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx):
+
+```jsx
+// Before:
+<Sider
+    breakpoint="lg"
+    collapsedWidth="0"
+    onCollapse={setCollapsed}
+    ...
+/>
+...
+<Layout style={{ marginLeft: isMobile ? 0 : (collapsed ? 0 : 200) }}>
+```
+
+#### 1. Why the Content Overlapped the Sidebar
+* Ant Design's `<Sider>` had `breakpoint="lg"` (992px) with `onCollapse={setCollapsed}`, but **was not given `collapsed={collapsed}` as a prop** (it was uncontrolled).
+* When the breakpoint was triggered, Ant Design called `onCollapse(true)`, setting `collapsed = true` in React state.
+* This caused `<Layout>` to calculate `marginLeft: 0px`.
+* However, on desktop viewports, `<Sider>` rendered expanded at **200px** with `position: fixed; left: 0`.
+* With `marginLeft: 0px`, the entire content area (tabs, search bar, and tables) shifted 200px to the left and rendered **directly on top of the fixed sidebar**.
+
+#### 2. Why It Specifically Happened on Pages with Tables
+* **Vertical Scrollbar Width (17px)**: Pages without tables (like `Home` or step-by-step `Routine Indent`) often fit within the screen height. When navigating to pages with large tables (such as `Admin / Inventory Settings`, `Routine Summary`, `Records`, or `Short Expiry`), hundreds of rows load and inject a vertical scrollbar. On screens near the 992px boundary (e.g. 1024px monitors, laptop screens with 125%/150% Windows scaling, or split/half-screen windows), the 17px vertical scrollbar reduced the client width below 991.98px, immediately firing Ant Design's `breakpoint="lg"` collapse.
+* **Table Reflow & ResizeObserver**: Ant Design tables with `scroll={{ x: ... }}` use `rc-resize-observer` to measure container widths and trigger window reflows, causing Ant Design's responsive handler to evaluate during layout recalculations.
+
+#### 3. Why Refresh (F5) Returned It to Normal
+* `<Sider>` only calls `onCollapse` when crossing breakpoints, not on mount. Once `collapsed` was set to `true`, the React state remained permanently stuck at `true` during client-side SPA navigation.
+* Pressing **Refresh (F5)** performed a full page reload, re-initializing the React state back to its default (`collapsed = false`), which restored `marginLeft: 200px`.
+
+---
+
+### Solution Applied
+
+In [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx):
+
+1. **Eliminated State-Driven Margin Conflicts**:
+   Removed the brittle JS-based `marginLeft` calculation and the uncontrolled `breakpoint="lg"` / `onCollapse` from `<Sider>`.
+2. **CSS Media-Query Driven Layout**:
+   Moved the margin and visibility behavior to CSS media queries:
+   * **`>= 992px` (Desktop)**: `.main-content-layout` has `margin-left: 200px !important`, ensuring the 200px fixed sidebar and content never overlap.
+   * **`< 992px` (Tablet & Mobile)**: `.main-content-layout` has `margin-left: 0 !important`, while the desktop sidebar is cleanly hidden and replaced with the drawer / bottom bar.
+3. **Table Flex Protection**:
+   Added `min-width: 0` to `.main-content-layout` and `.site-content` so wide tables with horizontal scroll (`scroll={{ x: 1400 }}`) remain contained within their parent without causing layout shifts.
+
+---
+
 ### Summary of Changes v1.1.6
 
 Implemented a dedicated touch-optimized mobile view for the Inventory page ([`src/pages/Admin/InventoryTable.jsx`](/arise/src/pages/Admin/InventoryTable.jsx)), replacing the wide desktop table on mobile devices with modern touch-friendly cards, search, filters, and mobile-adapted modals.

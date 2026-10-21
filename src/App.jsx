@@ -39,6 +39,21 @@ const ProtectedRoute = ({ children, requireIssuer = false }) => {
 function App() {
     React.useEffect(() => {
         initColors();
+
+        // Prevent native context menu (dictionary lookup, web search popup) on touch devices and mobile views
+        const handleContextMenu = (e) => {
+            // Allow native menu on editable inputs so Cut/Copy/Paste still work
+            if (e.target && e.target.closest && e.target.closest('input, textarea, [contenteditable="true"], .selectable-text')) {
+                return;
+            }
+            // Prevent on mobile screens or touch-based pointers
+            if (window.matchMedia('(max-width: 767.98px), (pointer: coarse)').matches) {
+                e.preventDefault();
+            }
+        };
+
+        window.addEventListener('contextmenu', handleContextMenu, { capture: true });
+        return () => window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
     }, []);
 
     return (

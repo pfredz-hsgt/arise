@@ -340,17 +340,16 @@ const ShortExpEntryMobileView = ({
                             backArrow={<LeftOutlined style={{ fontSize: 16 }} />}
                             onBack={() => navigate('/shortexp')}
                             right={
-                                <span
-                                    style={{
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        padding: '2px 7px',
-                                        background: '#eff6ff',
-                                        color: getUnitColor(unit) || '#1677ff',
-                                        borderRadius: 10,
-                                        border: '1px solid #bfdbfe'
-                                    }}
-                                >
+                                <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '3px 8px',
+                                    background: getUnitColor(unit),
+                                    color: '#ffffff',
+                                    borderRadius: 12,
+                                    fontSize: 11,
+                                    fontWeight: 700
+                                }}>
                                     {unit}
                                 </span>
                             }
