@@ -21,7 +21,8 @@ import {
     CheckCircleOutlined,
     SearchOutlined,
     WarningOutlined,
-    MinusOutlined
+    MinusOutlined,
+    CloseOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getUnitColor } from '../../lib/colorMappings';
@@ -355,7 +356,7 @@ const ShortExpEntryMobileView = ({
                             }
                         >
                             <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
-                                Record Short Expiry
+                                Start Expiry Check
                             </span>
                         </NavBar>
                     </div>
@@ -372,10 +373,10 @@ const ShortExpEntryMobileView = ({
                             }}
                         >
                             <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
-                                Shelf-by-Shelf Recording
+                                Shelf-wise Monitoring
                             </div>
                             <div style={{ fontSize: 12, color: '#64748b', marginBottom: 14 }}>
-                                Select a Rak from {unit} to step through each medication sequentially.
+                                Select a shelf from {unit} to check each medication expiry date sequentially.
                             </div>
 
                             {loadingRaks ? (
@@ -412,7 +413,7 @@ const ShortExpEntryMobileView = ({
                                         disabled={!selectedRak}
                                         style={{ fontWeight: 700, fontSize: 14 }}
                                     >
-                                        Start Recording
+                                        Start Expiry Check
                                     </Button>
                                 </div>
                             )}
@@ -528,6 +529,7 @@ const ShortExpEntryMobileView = ({
     const currentItem = items[currentIndex];
     const progressPercent = Math.round(((currentIndex + 1) / items.length) * 100);
     const isLastItem = currentIndex === items.length - 1;
+    const isFirstItem = currentIndex === 0;
 
     return (
         <ConfigProvider locale={enUS}>
@@ -684,16 +686,25 @@ const ShortExpEntryMobileView = ({
                     <Button
                         size="middle"
                         shape="rounded"
-                        disabled={currentIndex === 0 || saving}
-                        onClick={handlePrevious}
+                        disabled={saving}
+                        onClick={isFirstItem ? handleExit : handlePrevious}
                         style={{
-                            fontWeight: 600,
+                            fontWeight: 500,
                             display: 'flex',
                             alignItems: 'center',
                             gap: 4
                         }}
                     >
-                        <LeftOutlined /> Previous
+                        {isFirstItem ? (
+                            <>
+                                <CloseOutlined /> Cancel
+                            </>
+                        ) : (
+                            <>
+                                <LeftOutlined /> Previous
+                            </>
+                        )}
+
                     </Button>
 
                     <Button
@@ -704,7 +715,7 @@ const ShortExpEntryMobileView = ({
                         onClick={handleNext}
                         style={{
                             flex: 1,
-                            fontWeight: 700,
+                            fontWeight: 500,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -713,15 +724,14 @@ const ShortExpEntryMobileView = ({
                     >
                         {isLastItem ? (
                             <>
-                                Finish & Return <CheckCircleOutlined />
+                                Finish <CheckCircleOutlined />
                             </>
                         ) : (
                             <>
-                                Next Item <RightOutlined />
+                                Next <RightOutlined />
                             </>
                         )}
                     </Button>
-                    <SafeArea position="bottom" />
                 </div>
             </div>
         </ConfigProvider>

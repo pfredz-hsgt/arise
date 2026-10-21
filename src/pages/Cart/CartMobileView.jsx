@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     NavBar,
     Button,
@@ -62,6 +62,13 @@ const CartMobileView = ({
     // Local state for quantity editing popup
     const [localQty, setLocalQty] = useState(0);
 
+    useEffect(() => {
+        if (editingItem) {
+            const parsed = Number(editingItem.requested_qty);
+            setLocalQty(Number.isFinite(parsed) ? parsed : 0);
+        }
+    }, [editingItem]);
+
     const toggleExpand = (sessionId) => {
         setExpandedSessions(prev =>
             prev.includes(sessionId)
@@ -72,7 +79,8 @@ const CartMobileView = ({
 
     const openEditItem = (item) => {
         setEditingItem(item);
-        setLocalQty(item.requested_qty || 0);
+        const parsed = Number(item.requested_qty);
+        setLocalQty(Number.isFinite(parsed) ? parsed : 0);
     };
 
     const handleConfirmPhis = (session) => {
@@ -472,16 +480,16 @@ const CartMobileView = ({
                                                         {item.inventory_items?.name}
                                                     </div>
                                                     <span style={{
-                                                        background: (item.requested_qty || 0) === 0 ? '#f3f4f6' : '#e0e7ff', // Muted gray if 0, soft indigo if > 0
-                                                        color: (item.requested_qty || 0) === 0 ? '#9ca3af' : '#4338ca',      // Faded text if 0, dark indigo if > 0
-                                                        border: (item.requested_qty || 0) === 0 ? '1px solid #e5e7eb' : '1px solid #c7d2fe',
+                                                        background: (Number(item.requested_qty) || 0) === 0 ? '#f3f4f6' : '#e0e7ff', // Muted gray if 0, soft indigo if > 0
+                                                        color: (Number(item.requested_qty) || 0) === 0 ? '#9ca3af' : '#4338ca',      // Faded text if 0, dark indigo if > 0
+                                                        border: (Number(item.requested_qty) || 0) === 0 ? '1px solid #e5e7eb' : '1px solid #c7d2fe',
                                                         borderRadius: 6,
                                                         padding: '1px 8px',
                                                         fontSize: 13,
                                                         fontWeight: 500,
                                                         flexShrink: 0
                                                     }}>
-                                                        Qty: {item.requested_qty || 0}
+                                                        Qty: {Number(item.requested_qty) || 0}
                                                     </span>
 
 
@@ -601,7 +609,7 @@ const CartMobileView = ({
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                 {editingItem.inventory_items?.pku && (
                                     <span style={{ background: '#fff7e6', color: '#d46b08', padding: '1px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
-                                        PKU: {editingItem.inventory_items.pku}
+                                        {editingItem.inventory_items.pku}
                                     </span>
                                 )}
                                 {editingItem.inventory_items?.row && (
@@ -636,8 +644,8 @@ const CartMobileView = ({
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                                 <Button
                                     size="middle"
-                                    disabled={localQty <= 0}
-                                    onClick={() => setLocalQty(prev => Math.max(0, prev - 1))}
+                                    disabled={Number(localQty) <= 0}
+                                    onClick={() => setLocalQty(prev => Math.max(0, (Number(prev) || 0) - 1))}
                                     style={{ width: 44, height: 44, borderRadius: 10, borderColor: '#93c5fd', background: '#ffffff', color: '#1d4ed8' }}
                                 >
                                     <MinusOutlined style={{ fontSize: 16 }} />
@@ -648,14 +656,21 @@ const CartMobileView = ({
                                         type="number"
                                         inputMode="numeric"
                                         value={localQty}
-                                        onChange={val => setLocalQty(val === '' ? 0 : Number(val))}
+                                        onChange={val => {
+                                            if (val === '') {
+                                                setLocalQty('');
+                                            } else {
+                                                const parsed = parseInt(val, 10);
+                                                setLocalQty(isNaN(parsed) ? 0 : Math.max(0, parsed));
+                                            }
+                                        }}
                                         style={{ '--text-align': 'center', '--font-size': '22px', fontWeight: 800, color: '#1e40af' }}
                                     />
                                 </div>
 
                                 <Button
                                     size="middle"
-                                    onClick={() => setLocalQty(prev => prev + 1)}
+                                    onClick={() => setLocalQty(prev => (Number(prev) || 0) + 1)}
                                     style={{ width: 44, height: 44, borderRadius: 10, borderColor: '#93c5fd', background: '#ffffff', color: '#1d4ed8' }}
                                 >
                                     <PlusOutlined style={{ fontSize: 16 }} />
@@ -698,7 +713,7 @@ const CartMobileView = ({
                             shape="rounded"
                             color="primary"
                             loading={updatingQty}
-                            onClick={() => handleUpdateQuantity(localQty)}
+                            onClick={() => handleUpdateQuantity(Number(localQty) || 0)}
                             style={{ flex: 1, fontWeight: 700 }}
                         >
                             Save Quantity

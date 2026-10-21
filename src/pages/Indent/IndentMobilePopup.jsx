@@ -181,7 +181,7 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                                 fontSize: 11,
                                 fontWeight: 600
                             }}>
-                                PKU: {drug.pku}
+                                {drug.pku}
                             </span>
                         )}
                         {drug.main_unit && (

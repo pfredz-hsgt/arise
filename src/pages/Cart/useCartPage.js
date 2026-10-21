@@ -47,10 +47,11 @@ export const useCartPage = () => {
                 .map(sess => {
                     const uniqueItemsMap = new Map();
                     sess.indent_items.forEach(item => {
+                        const parsedQty = Number(item.requested_qty) || 0;
                         if (!uniqueItemsMap.has(item.item_id)) {
-                            uniqueItemsMap.set(item.item_id, { ...item });
+                            uniqueItemsMap.set(item.item_id, { ...item, requested_qty: parsedQty });
                         } else {
-                            uniqueItemsMap.get(item.item_id).requested_qty += item.requested_qty;
+                            uniqueItemsMap.get(item.item_id).requested_qty += parsedQty;
                         }
                     });
 
@@ -84,12 +85,13 @@ export const useCartPage = () => {
                     const { profileName, userUnit, reqs } = group;
                     const uniqueMappedItems = new Map();
                     reqs.forEach(req => {
+                        const parsedQty = Number(req.requested_qty) || 0;
                         if (!uniqueMappedItems.has(req.item_id)) {
                             uniqueMappedItems.set(req.item_id, {
                                 id: `req-${req.id}`,
                                 original_req_id: req.id,
                                 item_id: req.inventory_items?.id,
-                                requested_qty: req.requested_qty,
+                                requested_qty: parsedQty,
                                 snapshot_max_qty: req.snapshot_max_qty,
                                 snapshot_balance: req.snapshot_balance,
                                 indent_remarks: req.indent_remarks,
@@ -97,7 +99,7 @@ export const useCartPage = () => {
                                 created_at: req.created_at
                             });
                         } else {
-                            uniqueMappedItems.get(req.item_id).requested_qty += req.requested_qty;
+                            uniqueMappedItems.get(req.item_id).requested_qty += parsedQty;
                         }
                     });
 
@@ -154,6 +156,7 @@ export const useCartPage = () => {
 
             message.success('Quantity updated successfully');
             setEditModalVisible(false);
+            setEditingItem(null);
             fetchCartSessions(true);
         } catch (error) {
             console.error('Error updating quantity:', error);

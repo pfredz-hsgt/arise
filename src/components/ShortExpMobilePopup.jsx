@@ -165,7 +165,7 @@ const ShortExpMobilePopup = ({
                                     fontSize: 11,
                                     fontWeight: 600
                                 }}>
-                                    PKU: {selectedItem.pku}
+                                    {selectedItem.pku}
                                 </span>
                             )}
                             {selectedItem.main_unit && (

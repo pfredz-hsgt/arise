@@ -33,7 +33,7 @@ const EditQuantityModal = ({ visible, onCancel, onOk, editingItem, updatingQty }
 
     useEffect(() => {
         if (visible && editingItem) {
-            setLocalQuantity(editingItem.requested_qty);
+            setLocalQuantity(Number(editingItem.requested_qty) || 0);
         }
     }, [visible, editingItem]);
 
@@ -297,7 +297,7 @@ const CartDesktopView = ({
                                             style={{
                                                 padding: '12px 0',
                                                 cursor: 'pointer',
-                                                opacity: item.requested_qty === 0 ? 0.4 : 1
+                                                opacity: (Number(item.requested_qty) || 0) === 0 ? 0.4 : 1
                                             }}
                                             onClick={() => {
                                                 setEditingItem(item);
@@ -345,7 +345,14 @@ const CartDesktopView = ({
                                                         >
                                                             <Text>Max: <Text strong>{item.snapshot_max_qty}</Text></Text>
                                                             <Text>Bal: <Text strong>{item.snapshot_balance}</Text></Text>
-                                                            <Tag style={{ fontSize: '14px', padding: '2px 8px', fontWeight: 'bold' }} icon={item.requested_qty !== 0 ? <CheckCircleOutlined /> : undefined} color='green' variant='filled' >{item.requested_qty}</Tag>
+                                                            <Tag
+                                                                style={{ fontSize: '14px', padding: '2px 8px', fontWeight: 'bold' }}
+                                                                icon={(Number(item.requested_qty) || 0) !== 0 ? <CheckCircleOutlined /> : undefined}
+                                                                color={(Number(item.requested_qty) || 0) === 0 ? 'default' : 'green'}
+                                                                variant='filled'
+                                                            >
+                                                                {item.requested_qty}
+                                                            </Tag>
                                                         </Space>
                                                         {item.indent_remarks && (
                                                             <div style={{ marginTop: 4 }}>
@@ -367,7 +374,10 @@ const CartDesktopView = ({
 
             <EditQuantityModal
                 visible={editModalVisible}
-                onCancel={() => setEditModalVisible(false)}
+                onCancel={() => {
+                    setEditModalVisible(false);
+                    setEditingItem(null);
+                }}
                 onOk={handleUpdateQuantity}
                 editingItem={editingItem}
                 updatingQty={updatingQty}

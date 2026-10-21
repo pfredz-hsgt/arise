@@ -416,7 +416,7 @@ const InventoryMobileView = ({
                                                 )}
                                                 {drug.pku && (
                                                     <span style={{ background: '#f1f5f9', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>
-                                                        PKU: {drug.pku}
+                                                        {drug.pku}
                                                     </span>
                                                 )}
 

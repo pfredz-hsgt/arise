@@ -47,7 +47,7 @@ const ShortExpEntryDesktopView = ({
         return (
             <div style={{ maxWidth: 500, margin: '40px auto', textAlign: 'center' }}>
                 <Title level={3}>
-                    Record Short Expiry
+                    Start Expiry Check
                     <Tag
                         color={getUnitColor(unit)}
                         style={{ marginLeft: 8, verticalAlign: 'middle', fontWeight: 600 }}
@@ -56,7 +56,7 @@ const ShortExpEntryDesktopView = ({
                     </Tag>
                 </Title>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-                    Select a Rak from {unit} to iterate through all its items and record short expiry dates.
+                    Select a shelf from {unit} to check each medication expiry date sequentially.
                 </Text>
 
                 <Card>
@@ -78,7 +78,7 @@ const ShortExpEntryDesktopView = ({
                                 ))}
                             </Select>
                             <Button type="primary" size="large" block onClick={handleStart}>
-                                Start Recording
+                                Start Expiry Check
                             </Button>
                         </Space>
                     )}
@@ -152,7 +152,7 @@ const ShortExpEntryDesktopView = ({
             >
                 <div>
                     <Title level={4} style={{ margin: 0 }}>
-                        Record Short Expiry for Rak: {selectedRak}
+                        Start Expiry Check for Shelf: {selectedRak}
                     </Title>
                     <Text type="secondary">
                         Item {currentIndex + 1} of {items.length}
@@ -212,7 +212,7 @@ const ShortExpEntryDesktopView = ({
                                     marginBottom: '10px'
                                 }}
                             >
-                                PKU: {currentItem.pku}
+                                {currentItem.pku}
                             </div>
                         )}
                     </div>
