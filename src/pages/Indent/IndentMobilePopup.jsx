@@ -184,19 +184,6 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                                 {drug.pku}
                             </span>
                         )}
-                        {drug.main_unit && (
-                            <span style={{
-                                background: '#f6ffed',
-                                color: '#389e0d',
-                                border: '1px solid #b7eb8f',
-                                padding: '2px 8px',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                fontWeight: 500
-                            }}>
-                                {drug.main_unit}
-                            </span>
-                        )}
                         {drug.row && (
                             <span style={{
                                 background: '#f0f5ff',

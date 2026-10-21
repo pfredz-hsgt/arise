@@ -20,6 +20,8 @@ import {
     PlusOutlined
 } from '@ant-design/icons';
 import ShortExpModal from '../../components/ShortExpModal';
+import { getSourceColor, getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
+
 
 const RoutineIndentMobileView = ({
     rak,
@@ -148,35 +150,31 @@ const RoutineIndentMobileView = ({
                                 fontSize: 12,
                                 fontWeight: 600
                             }}>
-                                PKU: {currentItem.pku}
+                                {currentItem.pku}
                             </span>
                         )}
-                        {currentItem.main_unit && (
+                        {currentItem.puchase_type && (
                             <span style={{
-                                display: 'inline-block',
-                                background: '#f6ffed',
-                                color: '#389e0d',
-                                border: '1px solid #b7eb8f',
-                                padding: '2px 8px',
-                                borderRadius: 6,
-                                fontSize: 12,
+                                background: '#fff2f2ff',
+                                color: getPuchaseTypeColor(currentItem.puchase_type),
+                                padding: '1px 6px',
+                                borderRadius: 4,
+                                fontSize: 11,
                                 fontWeight: 500
                             }}>
-                                {currentItem.main_unit}
+                                {currentItem.puchase_type}
                             </span>
                         )}
-                        {currentItem.row && (
+                        {currentItem.indent_source && (
                             <span style={{
-                                display: 'inline-block',
-                                background: '#f0f5ff',
-                                color: '#1d39c4',
-                                border: '1px solid #adc6ff',
-                                padding: '2px 8px',
-                                borderRadius: 6,
-                                fontSize: 12,
+                                background: '#f8fff1ff',
+                                color: getSourceColor(currentItem.indent_source),
+                                padding: '1px 6px',
+                                borderRadius: 4,
+                                fontSize: 11,
                                 fontWeight: 500
                             }}>
-                                Row: {currentItem.row}
+                                {currentItem.indent_source}
                             </span>
                         )}
                     </div>

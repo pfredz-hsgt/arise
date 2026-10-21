@@ -15,7 +15,8 @@ import {
     FilterOutlined,
     RightOutlined,
     PlusOutlined,
-    ClearOutlined
+    ClearOutlined,
+    EnvironmentOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { getSourceColor, getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
@@ -249,24 +250,6 @@ const IndentMobileView = ({
                                             {drug.name}
                                         </div>
                                     </div>
-                                    <div style={{
-                                        background: '#eff6ff',
-                                        color: '#1d4ed8',
-                                        borderRadius: 6,
-                                        padding: '4px 8px',
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 2,
-                                        flexShrink: 0
-                                    }}>
-                                        <PlusOutlined style={{ fontSize: 10 }} /> Indent
-                                    </div>
-                                </div>
-
-                                {/* Tags Row */}
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
                                     {drug.pku && (
                                         <span style={{
                                             background: '#fff7e6',
@@ -280,22 +263,46 @@ const IndentMobileView = ({
                                             {drug.pku}
                                         </span>
                                     )}
-                                    {drug.row && (
-                                        <span style={{
-                                            background: '#f0f5ff',
-                                            color: '#1d39c4',
-                                            border: '1px solid #adc6ff',
-                                            padding: '1px 6px',
-                                            borderRadius: 4,
-                                            fontSize: 11,
-                                            fontWeight: 500
-                                        }}>
-                                            Row: {drug.row}
-                                        </span>
-                                    )}
+                                </div>
+
+                                {/* Tags Row */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+                                    <span style={{
+                                        background: '#f5f5ffff',
+                                        color: '#1d39c4',
+                                        border: '1px solid #a1bdffff',
+                                        padding: '1px 5px',
+                                        borderRadius: 4,
+                                        fontSize: 11,
+                                        fontWeight: 500
+
+                                    }}>
+                                        {drug.row && (
+                                            <>
+                                                <EnvironmentOutlined style={{ color: '#1d39c4' }} />
+                                                <span style={{ marginLeft: '5px' }}> {drug.row || '-'}</span>
+                                            </>
+                                        )}
+
+                                        {/* Only show dot if drug.tingkat has a value */}
+                                        {drug.tingkat && (
+                                            <>
+                                                <span style={{ color: '#334155' }}>-</span>
+                                                <span> {drug.tingkat}</span>
+                                            </>
+                                        )}
+
+                                        {/* Only show dot if drug.petak has a value */}
+                                        {drug.petak && (
+                                            <>
+                                                <span style={{ color: '#334155' }}>-</span>
+                                                <span> {drug.petak}</span>
+                                            </>
+                                        )}
+                                    </span>
                                     {drug.puchase_type && (
                                         <span style={{
-                                            background: '#fff1f0',
+                                            background: '#fff2f2ff',
                                             color: getPuchaseTypeColor(drug.puchase_type),
                                             padding: '1px 6px',
                                             borderRadius: 4,
@@ -307,7 +314,7 @@ const IndentMobileView = ({
                                     )}
                                     {drug.indent_source && (
                                         <span style={{
-                                            background: '#f6ffed',
+                                            background: '#f8fff1ff',
                                             color: getSourceColor(drug.indent_source),
                                             padding: '1px 6px',
                                             borderRadius: 4,

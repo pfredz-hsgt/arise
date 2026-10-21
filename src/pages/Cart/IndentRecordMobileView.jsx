@@ -5,7 +5,7 @@ import {
     Button,
     Checkbox,
     Picker,
-    DatePicker,
+    CalendarPicker,
     SafeArea,
     SpinLoading,
     ConfigProvider
@@ -179,8 +179,8 @@ const IndentRecordMobileView = ({
 
     // Pickers visibility
     const [userPickerVisible, setUserPickerVisible] = useState(false);
-    const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
-    const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
+    const [calendarPickerVisible, setCalendarPickerVisible] = useState(false);
+    const [tempDateRange, setTempDateRange] = useState(null);
 
     // Mobile pagination state
     const [page, setPage] = useState(1);
@@ -231,7 +231,19 @@ const IndentRecordMobileView = ({
     // Active date label
     const dateRangeLabel = useMemo(() => {
         if (!dateRange || !dateRange[0] || !dateRange[1]) return 'All Dates';
+        if (dayjs(dateRange[0]).isSame(dateRange[1], 'day')) {
+            return dayjs(dateRange[0]).format('DD/MM/YYYY');
+        }
         return `${dayjs(dateRange[0]).format('DD/MM')} - ${dayjs(dateRange[1]).format('DD/MM')}`;
+    }, [dateRange]);
+
+    // Bounds for calendar picker
+    const calendarMin = useMemo(() => {
+        const twoYearsAgo = dayjs().subtract(2, 'year').startOf('month');
+        if (dateRange && dateRange[0] && dayjs(dateRange[0]).isBefore(twoYearsAgo)) {
+            return dayjs(dateRange[0]).startOf('month').toDate();
+        }
+        return twoYearsAgo.toDate();
     }, [dateRange]);
 
     return (
@@ -341,7 +353,14 @@ const IndentRecordMobileView = ({
 
                         {/* Date Filter Pill */}
                         <div
-                            onClick={() => setStartDatePickerVisible(true)}
+                            onClick={() => {
+                                setTempDateRange(
+                                    dateRange && dateRange[0] && dateRange[1]
+                                        ? [dateRange[0].toDate(), dateRange[1].toDate()]
+                                        : null
+                                );
+                                setCalendarPickerVisible(true);
+                            }}
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -811,34 +830,25 @@ const IndentRecordMobileView = ({
                     title="Select Indenter"
                 />
 
-                {/* Start Date Picker */}
-                <DatePicker
-                    visible={startDatePickerVisible}
-                    onClose={() => setStartDatePickerVisible(false)}
-                    defaultValue={dateRange?.[0]?.toDate() || new Date()}
+                {/* Date Range Calendar Picker */}
+                <CalendarPicker
+                    visible={calendarPickerVisible}
+                    onClose={() => setCalendarPickerVisible(false)}
+                    selectionMode="range"
+                    title="Select Date Range"
+                    min={calendarMin}
                     max={new Date()}
-                    title="Select Start Date"
+                    closeOnMaskClick={true}
+                    value={tempDateRange}
+                    onChange={val => setTempDateRange(val)}
                     onConfirm={val => {
-                        const start = dayjs(val).startOf('day');
-                        const end = dateRange?.[1] || dayjs(val).endOf('day');
-                        setDateRange([start, end]);
-                        // Open end date picker right after
-                        setTimeout(() => setEndDatePickerVisible(true), 300);
-                    }}
-                />
-
-                {/* End Date Picker */}
-                <DatePicker
-                    visible={endDatePickerVisible}
-                    onClose={() => setEndDatePickerVisible(false)}
-                    defaultValue={dateRange?.[1]?.toDate() || new Date()}
-                    min={dateRange?.[0]?.toDate() || undefined}
-                    max={new Date()}
-                    title="Select End Date"
-                    onConfirm={val => {
-                        const end = dayjs(val).endOf('day');
-                        const start = dateRange?.[0] || dayjs(val).startOf('day');
-                        setDateRange([start, end]);
+                        if (val && val[0] && val[1]) {
+                            const start = dayjs(val[0]).startOf('day');
+                            const end = dayjs(val[1]).endOf('day');
+                            setDateRange([start, end]);
+                        } else {
+                            setDateRange(null);
+                        }
                     }}
                 />
             </div>
