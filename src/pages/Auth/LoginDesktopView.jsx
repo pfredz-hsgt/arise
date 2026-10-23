@@ -311,7 +311,7 @@ const LoginDesktopView = ({
                 .brand-title {
                     font-family: 'Plus Jakarta Sans', 'Inter', sans-serif !important;
                     font-size: 36px !important;
-                    font-weight: 400 !important;
+                    font-weight: 200 !important;
                     letter-spacing: 4px !important;
                     margin: 0 0 4px 0 !important;
                     color: #ffffff !important;
@@ -368,16 +368,16 @@ const LoginDesktopView = ({
                     border: none !important;
                     box-shadow: none !important;
                     color: #ffffff !important;
-                    font-size: 14.5px !important;
-                    padding: 8px 0 !important;
+                    font-size: 16px !important;
+                    padding: 5px 0 !important;
                     font-family: inherit !important;
                 }
                 .clean-input-box input {
                     color: #ffffff !important;
                 }
                 .clean-input-box input::placeholder {
-                    color: #94a3b8 !important;
-                    font-size: 13.5px !important;
+                    color: #495566ff !important;
+                    font-size: 15px !important;
                 }
 
                 /* Professional Submit Button */
