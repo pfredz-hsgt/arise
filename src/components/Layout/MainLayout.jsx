@@ -68,7 +68,7 @@ const getInitials = (name) => {
     if (!name) return 'US';
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
 // Shared Brand Header component for desktop Sider & tablet Drawer
