@@ -7,7 +7,8 @@ import {
     TextArea,
     Tag,
     SafeArea,
-    SpinLoading
+    SpinLoading,
+    Dialog
 } from 'antd-mobile';
 import {
     LeftOutlined,
@@ -17,7 +18,8 @@ import {
     CheckCircleOutlined,
     ExclamationCircleOutlined,
     MinusOutlined,
-    PlusOutlined
+    PlusOutlined,
+    CloseCircleOutlined
 } from '@ant-design/icons';
 import ShortExpModal from '../../components/ShortExpModal';
 import { getSourceColor, getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
@@ -32,6 +34,8 @@ const RoutineIndentMobileView = ({
     loading,
     saving,
     loadingItem,
+    cancelling = false,
+    cancelIndent,
     currentMaxQty,
     currentQty,
     setCurrentQty,
@@ -52,6 +56,20 @@ const RoutineIndentMobileView = ({
 }) => {
     const [remarksExpanded, setRemarksExpanded] = React.useState(false);
 
+    const handleConfirmCancel = () => {
+        Dialog.confirm({
+            title: 'Cancel Routine Indent?',
+            content: `Are you sure you want to cancel this indent session for Rak ${rak}? All progress for this shelf will be cleared and discarded.`,
+            confirmText: 'Cancel Indent',
+            cancelText: 'Keep Auditing',
+            onConfirm: async () => {
+                if (cancelIndent) {
+                    await cancelIndent();
+                }
+            }
+        });
+    };
+
     if (loading) {
         return (
             <div style={{
@@ -69,7 +87,40 @@ const RoutineIndentMobileView = ({
     }
 
     if (!currentItem || items.length === 0) {
-        return null;
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '60vh',
+                padding: 24,
+                textAlign: 'center',
+                gap: 16
+            }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>
+                    No Items Found for Rak {rak}
+                </div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>
+                    There are no drugs mapped to this storage shelf in the inventory catalog.
+                </div>
+                <Button
+                    color="danger"
+                    fill="outline"
+                    onClick={handleConfirmCancel}
+                    loading={cancelling}
+                    style={{
+                        borderRadius: 8,
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6
+                    }}
+                >
+                    <CloseCircleOutlined style={{ fontSize: 14 }} /> Cancel Indent & Return
+                </Button>
+            </div>
+        );
     }
 
     const isLastItem = currentIndex === items.length - 1;
@@ -96,19 +147,38 @@ const RoutineIndentMobileView = ({
                     backArrow={<LeftOutlined style={{ fontSize: 16 }} />}
                     onBack={() => navigate('/routine-summary')}
                     right={
-                        <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '3px 10px',
-                            background: '#e6f4ff',
-                            color: '#1677ff',
-                            borderRadius: 12,
-                            fontSize: 12,
-                            fontWeight: 600
-                        }}>
-                            {currentIndex + 1} / {items.length}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '3px 8px',
+                                background: '#e6f4ff',
+                                color: '#1677ff',
+                                borderRadius: 12,
+                                fontSize: 12,
+                                fontWeight: 600
+                            }}>
+                                {currentIndex + 1} / {items.length}
+                            </span>
+                            <Button
+                                size="mini"
+                                color="danger"
+                                fill="none"
+                                onClick={handleConfirmCancel}
+                                loading={cancelling}
+                                style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    borderRadius: 6,
+                                    border: '1px solid #fecaca',
+                                    background: '#fff5f5',
+                                    color: '#dc2626'
+                                }}
+                            >
+                                Cancel Indent
+                            </Button>
+                        </div>
                     }
                 >
                     <span style={{ fontWeight: 600, fontSize: 16 }}>Rak {rak}</span>
@@ -480,7 +550,7 @@ const RoutineIndentMobileView = ({
                         <div style={{ marginTop: 10 }}>
                             <TextArea
                                 rows={2}
-                                placeholder="E.g. quota increased, new regimen, loan to ward..."
+                                placeholder="E.g. Usage increased, new guideline, etc"
                                 value={currentRemarks}
                                 onChange={(val) => setCurrentRemarks(val)}
                                 disabled={loadingItem}
@@ -495,6 +565,31 @@ const RoutineIndentMobileView = ({
                             />
                         </div>
                     )}
+                </div>
+
+                {/* Cancel Indent Session Option */}
+                <div style={{ textAlign: 'center', marginTop: 14, marginBottom: 8 }}>
+                    <Button
+                        fill="none"
+                        color="danger"
+                        size="small"
+                        onClick={handleConfirmCancel}
+                        loading={cancelling}
+                        style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: '#dc2626',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '6px 16px',
+                            borderRadius: 8,
+                            border: '1px solid #fecaca',
+                            background: '#fef2f2'
+                        }}
+                    >
+                        <CloseCircleOutlined style={{ fontSize: 14 }} /> Cancel Indent
+                    </Button>
                 </div>
 
             </div>

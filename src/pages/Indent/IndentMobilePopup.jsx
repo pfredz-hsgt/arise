@@ -10,13 +10,16 @@ import {
     CloseOutlined,
     MinusOutlined,
     PlusOutlined,
-    ShoppingCartOutlined
+    ShoppingCartOutlined,
+    LockOutlined
 } from '@ant-design/icons';
 import { message } from 'antd';
 import { api } from '../../lib/api';
 import { getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
+import { useAuth } from '../../contexts/AuthContext';
 
 const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
+    const { isIssuer } = useAuth();
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(0);
     const [maxQty, setMaxQty] = useState(0);
@@ -61,6 +64,11 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
     };
 
     const handleSubmit = async () => {
+        if (isIssuer) {
+            message.warning('Issuers have view-only access. Only Indenters can create indents.');
+            return;
+        }
+
         if (!quantity || quantity < 1) {
             message.warning('Quantity must be at least 1');
             return;
@@ -71,7 +79,7 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
             await api.post('/indents', {
                 item_id: drug.id,
                 requested_qty: quantity,
-                status: 'Pending',
+                status: 'Draft', // will be changed to Pending after user press submit button, then will appear in Issuer Cart to be approved
                 snapshot_max_qty: maxQty,
                 snapshot_balance: balance,
                 indent_remarks: remarks || null,
@@ -120,9 +128,24 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                     alignItems: 'center',
                     justifyContent: 'space-between'
                 }}>
-                    <span style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>
-                        Add to Urgent Indent
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>
+                            {isIssuer ? 'Drug Details' : 'Add to Urgent Indent'}
+                        </span>
+                        {isIssuer && (
+                            <span style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                background: '#fef3c7',
+                                color: '#b45309',
+                                padding: '2px 8px',
+                                borderRadius: 6,
+                                border: '1px solid #fde68a'
+                            }}>
+                                View Only
+                            </span>
+                        )}
+                    </div>
                     <button
                         onClick={() => onClose(false)}
                         style={{
@@ -152,6 +175,25 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                 flexDirection: 'column',
                 gap: 12
             }}>
+                {/* View-only banner for Issuer */}
+                {isIssuer && (
+                    <div style={{
+                        background: '#eff6ff',
+                        borderRadius: 12,
+                        padding: '10px 14px',
+                        border: '1px solid #bfdbfe',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        color: '#1e40af',
+                        fontSize: 13,
+                        fontWeight: 500
+                    }}>
+                        <LockOutlined style={{ fontSize: 15, color: '#2563eb' }} />
+                        <span>Strictly for role Indenter only. Issuers have view-only access.</span>
+                    </div>
+                )}
+
                 {/* Drug Info Summary Card */}
                 <div style={{
                     background: '#ffffff',
@@ -249,23 +291,24 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
 
                         {/* Balance */}
                         <div style={{
-                            background: '#ffffff',
+                            background: isIssuer ? '#f8fafc' : '#ffffff',
                             borderRadius: 10,
                             padding: '8px',
-                            border: '2px solid #1677ff',
+                            border: isIssuer ? '1px solid #e2e8f0' : '2px solid #1677ff',
                             textAlign: 'center'
                         }}>
-                            <div style={{ fontSize: 11, color: '#1677ff', fontWeight: 600, marginBottom: 2 }}>Balance</div>
+                            <div style={{ fontSize: 11, color: isIssuer ? '#64748b' : '#1677ff', fontWeight: 600, marginBottom: 2 }}>Balance</div>
                             <Input
                                 type="number"
                                 inputMode="numeric"
                                 value={balance !== null && balance !== undefined ? balance : ''}
                                 onChange={handleBalanceChange}
+                                disabled={isIssuer}
                                 style={{
                                     '--text-align': 'center',
                                     '--font-size': '22px',
                                     fontWeight: 700,
-                                    color: '#0f172a'
+                                    color: isIssuer ? '#64748b' : '#0f172a'
                                 }}
                             />
                         </div>
@@ -275,6 +318,7 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <Button
                             size="small"
+                            disabled={isIssuer}
                             onClick={() => setBalanceQuick(0)}
                             style={{
                                 flex: 1,
@@ -283,13 +327,15 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                                 fontWeight: 600,
                                 borderColor: '#ffa39e',
                                 color: '#cf1322',
-                                background: '#fff1f0'
+                                background: '#fff1f0',
+                                opacity: isIssuer ? 0.5 : 1
                             }}
                         >
                             NIL (0)
                         </Button>
                         <Button
                             size="small"
+                            disabled={isIssuer}
                             onClick={() => setBalanceQuick(maxQty)}
                             style={{
                                 flex: 1,
@@ -298,22 +344,25 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                                 fontWeight: 600,
                                 borderColor: '#b7eb8f',
                                 color: '#389e0d',
-                                background: '#f6ffed'
+                                background: '#f6ffed',
+                                opacity: isIssuer ? 0.5 : 1
                             }}
                         >
                             MAX ({maxQty})
                         </Button>
                         <Button
                             size="small"
+                            disabled={isIssuer}
                             onClick={() => adjustBalance(-1)}
-                            style={{ borderRadius: 8, width: 34, height: 32, padding: 0 }}
+                            style={{ borderRadius: 8, width: 34, height: 32, padding: 0, opacity: isIssuer ? 0.5 : 1 }}
                         >
                             <MinusOutlined style={{ fontSize: 12 }} />
                         </Button>
                         <Button
                             size="small"
+                            disabled={isIssuer}
                             onClick={() => adjustBalance(1)}
-                            style={{ borderRadius: 8, width: 34, height: 32, padding: 0 }}
+                            style={{ borderRadius: 8, width: 34, height: 32, padding: 0, opacity: isIssuer ? 0.5 : 1 }}
                         >
                             <PlusOutlined style={{ fontSize: 12 }} />
                         </Button>
@@ -323,10 +372,10 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
 
                     {/* Indent Quantity Target */}
                     <div style={{
-                        background: '#eff6ff',
+                        background: isIssuer ? '#f8fafc' : '#eff6ff',
                         borderRadius: 12,
                         padding: '12px',
-                        border: '1.5px solid #bfdbfe'
+                        border: isIssuer ? '1px solid #e2e8f0' : '1.5px solid #bfdbfe'
                     }}>
                         <div style={{
                             display: 'flex',
@@ -334,24 +383,24 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                             alignItems: 'center',
                             marginBottom: 8
                         }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: '#1e40af' }}>
-                                Indent Quantity
+                            <span style={{ fontSize: 13, fontWeight: 700, color: isIssuer ? '#64748b' : '#1e40af' }}>
+                                Indent Quantity {isIssuer && '(Disabled)'}
                             </span>
-
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <Button
                                 size="middle"
-                                disabled={quantity <= 0}
+                                disabled={isIssuer || quantity <= 0}
                                 onClick={() => adjustQuantity(-1)}
                                 style={{
                                     borderRadius: 8,
                                     width: 42,
                                     height: 42,
-                                    borderColor: '#93c5fd',
+                                    borderColor: isIssuer ? '#e2e8f0' : '#93c5fd',
                                     background: '#ffffff',
-                                    color: '#1d4ed8'
+                                    color: isIssuer ? '#94a3b8' : '#1d4ed8',
+                                    opacity: isIssuer ? 0.5 : 1
                                 }}
                             >
                                 <MinusOutlined style={{ fontSize: 14 }} />
@@ -361,33 +410,36 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                                 flex: 1,
                                 background: '#ffffff',
                                 borderRadius: 8,
-                                border: '1.5px solid #93c5fd',
+                                border: isIssuer ? '1px solid #e2e8f0' : '1.5px solid #93c5fd',
                                 padding: '4px'
                             }}>
                                 <Input
                                     type="number"
                                     inputMode="numeric"
+                                    disabled={isIssuer}
                                     value={quantity !== undefined && quantity !== null ? quantity : 0}
                                     onChange={val => setQuantity(val === '' ? 0 : Number(val))}
                                     style={{
                                         '--text-align': 'center',
                                         '--font-size': '22px',
                                         fontWeight: 800,
-                                        color: '#1e40af'
+                                        color: isIssuer ? '#64748b' : '#1e40af'
                                     }}
                                 />
                             </div>
 
                             <Button
                                 size="middle"
+                                disabled={isIssuer}
                                 onClick={() => adjustQuantity(1)}
                                 style={{
                                     borderRadius: 8,
                                     width: 42,
                                     height: 42,
-                                    borderColor: '#93c5fd',
+                                    borderColor: isIssuer ? '#e2e8f0' : '#93c5fd',
                                     background: '#ffffff',
-                                    color: '#1d4ed8'
+                                    color: isIssuer ? '#94a3b8' : '#1d4ed8',
+                                    opacity: isIssuer ? 0.5 : 1
                                 }}
                             >
                                 <PlusOutlined style={{ fontSize: 14 }} />
@@ -404,14 +456,15 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                     border: '1px solid #e2e8f0'
                 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                        Remarks (Optional)
+                        Remarks {isIssuer ? '(Disabled for Issuer)' : '(Optional)'}
                     </div>
                     <TextArea
                         rows={2}
-                        placeholder="E.g. urgent quota boost, loan to ward..."
+                        placeholder={isIssuer ? "Remarks disabled for Issuer" : "Eg: Usage increases"}
                         value={remarks}
                         onChange={setRemarks}
-                        showCount
+                        disabled={isIssuer}
+                        showCount={!isIssuer}
                         maxLength={150}
                         style={{
                             border: '1px solid #cbd5e1',
@@ -443,32 +496,43 @@ const IndentMobilePopup = ({ drug, visible, onClose, onSuccess }) => {
                         disabled={loading}
                         onClick={() => onClose(false)}
                         style={{
-                            flex: '0 0 32%',
+                            flex: isIssuer ? 1 : '0 0 32%',
                             fontWeight: 600,
                             fontSize: 14,
                             borderColor: '#cbd5e1',
                             color: '#475569'
                         }}
                     >
-                        Cancel
+                        {isIssuer ? 'Close' : 'Cancel'}
                     </Button>
                     <Button
                         size="large"
                         shape="rounded"
                         color="primary"
+                        disabled={isIssuer || loading}
                         loading={loading}
                         onClick={handleSubmit}
                         style={{
-                            flex: 1,
+                            flex: isIssuer ? 1 : 1,
                             fontWeight: 700,
-                            fontSize: 15,
+                            fontSize: 14,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: 6
+                            gap: 6,
+                            opacity: isIssuer ? 0.55 : 1,
+                            cursor: isIssuer ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        <ShoppingCartOutlined /> Add to Indent
+                        {isIssuer ? (
+                            <>
+                                <LockOutlined /> Indenter Only
+                            </>
+                        ) : (
+                            <>
+                                <ShoppingCartOutlined /> Add to Indent
+                            </>
+                        )}
                     </Button>
                 </div>
             </div>

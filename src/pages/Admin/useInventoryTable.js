@@ -113,6 +113,23 @@ export const useInventoryTable = () => {
         }
     };
 
+    const handleQuickUpdate = async (id, field, value) => {
+        // Optimistically update local drugs state
+        setDrugs(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d));
+        try {
+            await api.put(`/inventory/${id}`, { [field]: value });
+            message.success({
+                content: `Updated ${field.replace('_', ' ')}`,
+                key: `quick-update-${id}-${field}`,
+                duration: 1.5
+            });
+        } catch (error) {
+            console.error('Error quick-updating drug:', error);
+            message.error(`Failed to update ${field}`);
+            fetchDrugs(); // Rollback to server state
+        }
+    };
+
     // Filter drugs based on search query (used directly by Desktop Table which has built-in column filters)
     const filteredDrugs = useMemo(() => {
         if (!searchQuery.trim()) return drugs;
@@ -226,6 +243,7 @@ export const useInventoryTable = () => {
         handleEdit,
         handleDelete,
         handleSubmit,
+        handleQuickUpdate,
         filteredDrugs,
         mobileFilteredDrugs,
         selectedUnitFilter,

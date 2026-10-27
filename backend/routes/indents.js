@@ -20,9 +20,35 @@ function resolveUnits(req, requestedUnit) {
     return [unit];
 }
 
-// Get cart data for Issuer
+// Get cart data for Issuer or Indenter
 router.get('/cart', authenticateToken, async (req, res) => {
     try {
+        const isIndenter = req.user.role?.toLowerCase() === 'indenter';
+
+        // Role INDENTER: only see their own items from indent_requests with status 'Draft'
+        // and do not see any routine indents (indent_items)
+        if (isIndenter) {
+            const requestsResult = await pool.query(`
+                SELECT ir.*, u.name as profile_name, u.phis_username, u.phis_password, u.main_unit as user_main_unit, row_to_json(inv.*) as inventory_items
+                FROM indent_requests ir
+                LEFT JOIN users u ON ir.user_id = u.id
+                LEFT JOIN inventory_items inv ON ir.item_id = inv.id
+                WHERE ir.status = 'Draft' AND ir.user_id = $1
+                ORDER BY ir.created_at ASC
+            `, [req.user.id]);
+
+            const requestsData = requestsResult.rows.map(item => {
+                item.profiles = {
+                    name: item.profile_name,
+                    phis_username: item.phis_username,
+                    phis_password: item.phis_password ? decrypt(item.phis_password) : item.phis_password
+                };
+                return item;
+            });
+
+            return res.json({ sessionsData: [], requestsData });
+        }
+
         const isAll = req.query.all_units === 'true';
         const targetUnits = resolveUnits(req, req.query.main_unit);
 
@@ -226,6 +252,11 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 router.post('/', authenticateToken, async (req, res) => {
+    // Creating indents is strictly for Indenters; Issuers have view-only access
+    if (req.user.role?.toLowerCase() === 'issuer') {
+        return res.status(403).json({ error: 'Issuers cannot create indents. Indent creation is strictly for role Indenters.' });
+    }
+
     const { item_id, requested_qty, status, snapshot_max_qty, snapshot_balance, indent_remarks } = req.body;
     try {
         if (req.user.main_unit) {
@@ -238,7 +269,7 @@ router.post('/', authenticateToken, async (req, res) => {
         const result = await pool.query(
             `INSERT INTO indent_requests (user_id, item_id, requested_qty, status, snapshot_max_qty, snapshot_balance, indent_remarks) 
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [req.user.id, item_id, requested_qty, status || 'Pending', snapshot_max_qty, snapshot_balance, indent_remarks]
+            [req.user.id, item_id, requested_qty, status || 'Draft', snapshot_max_qty, snapshot_balance, indent_remarks]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -246,10 +277,23 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
-// Batch update status for multiple requests
+// Batch update status for multiple requests (e.g. Indenter submit Draft -> Pending, Issuer approve -> Approved)
 router.post('/batch-update', authenticateToken, async (req, res) => {
     const { ids, status } = req.body;
     try {
+        const isIndenter = req.user.role?.toLowerCase() === 'indenter';
+
+        if (isIndenter) {
+            if (status !== 'Pending') {
+                return res.status(403).json({ error: 'Indenter can only submit Draft items to Pending' });
+            }
+            await pool.query(
+                "UPDATE indent_requests SET status = 'Pending' WHERE id = ANY($1::uuid[]) AND user_id = $2 AND status = 'Draft'",
+                [ids, req.user.id]
+            );
+            return res.json({ success: true });
+        }
+
         await pool.query('UPDATE indent_requests SET status = $1 WHERE id = ANY($2::uuid[])', [status, ids]);
         res.json({ success: true });
     } catch (err) {
@@ -257,10 +301,26 @@ router.post('/batch-update', authenticateToken, async (req, res) => {
     }
 });
 
-// Update an indent request (e.g., status to Approved or Completed)
+// Update an indent request (e.g., status to Approved/Completed/Pending, or requested_qty)
 router.put('/:id', authenticateToken, async (req, res) => {
     const { status, requested_qty } = req.body;
     try {
+        const isIndenter = req.user.role?.toLowerCase() === 'indenter';
+        if (isIndenter) {
+            if (status && status !== 'Pending' && status !== 'Draft') {
+                return res.status(403).json({ error: 'Unauthorized status transition' });
+            }
+            const result = await pool.query(
+                `UPDATE indent_requests 
+                 SET status = COALESCE($1, status), 
+                     requested_qty = COALESCE($2, requested_qty) 
+                 WHERE id = $3 AND user_id = $4 AND status = 'Draft' RETURNING *`,
+                [status, requested_qty, req.params.id, req.user.id]
+            );
+            if (result.rows.length === 0) return res.status(404).json({ error: 'Request not found or not editable' });
+            return res.json(result.rows[0]);
+        }
+
         const result = await pool.query(
             `UPDATE indent_requests 
              SET status = COALESCE($1, status), 
@@ -278,8 +338,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete an indent request (e.g. removing from cart)
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('DELETE FROM indent_requests WHERE id = $1 RETURNING *', [req.params.id]);
-        if (result.rows.length === 0) return res.status(404).json({ error: 'Request not found' });
+        const isIndenter = req.user.role?.toLowerCase() === 'indenter';
+        let result;
+        if (isIndenter) {
+            result = await pool.query(
+                "DELETE FROM indent_requests WHERE id = $1 AND user_id = $2 AND status = 'Draft' RETURNING *",
+                [req.params.id, req.user.id]
+            );
+        } else {
+            result = await pool.query('DELETE FROM indent_requests WHERE id = $1 RETURNING *', [req.params.id]);
+        }
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Request not found or not removable' });
         res.json({ message: 'Deleted successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });

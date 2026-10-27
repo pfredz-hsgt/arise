@@ -17,6 +17,8 @@ import {
     Row,
     Col,
     Drawer,
+    Tooltip,
+    Alert,
 } from 'antd';
 import { EditOutlined, FormOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
@@ -32,7 +34,7 @@ const { TextArea } = Input;
 
 const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 500 }) => {
     const isMobile = useIsMobile(768);
-    const { user } = useAuth();
+    const { user, isIssuer } = useAuth();
     const [form] = Form.useForm();
 
     const [loading, setLoading] = useState(false);
@@ -105,6 +107,11 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
     };
 
     const handleSubmit = async (values) => {
+        if (isIssuer) {
+            message.warning('Issuers have view-only access. Only Indenters can create indents.');
+            return;
+        }
+
         try {
             setLoading(true);
 
@@ -118,7 +125,7 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
             await api.post('/indents', {
                 item_id: drug.id,
                 requested_qty: values.quantity,
-                status: 'Pending',
+                status: 'Draft', // will be changed to Pending after user press submit button, then will appear in Issuer Cart to be approved
                 snapshot_max_qty: maxQty,
                 snapshot_balance: balance,
                 indent_remarks: values.remarks || null,
@@ -142,7 +149,7 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
         const handleKeyDown = (e) => {
             if (e.defaultPrevented) return;
 
-            if (visible && e.key === 'Enter') {
+            if (visible && e.key === 'Enter' && !isIssuer) {
                 e.preventDefault();
                 e.stopPropagation();
                 form.submit();
@@ -151,7 +158,7 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [visible, form]);
+    }, [visible, form, isIssuer]);
 
     if (!drug) return null;
 
@@ -173,9 +180,16 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                 onClose={handleClose}
                 mask={false}
                 zIndex={1000}
+                styles={{
+                    content: {
+                        boxShadow: '-8px 0 28px rgba(0, 0, 0, 0.16)',
+                        borderLeft: '1px solid #e2e8f0',
+                    }
+                }}
                 title={
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: 24 }}>
-                        <span>Add to Indent</span>
+                        <span>{isIssuer ? 'View Drug Details (Issuer)' : 'Add to Indent'}</span>
+                        {isIssuer && <Tag color="orange" style={{ fontWeight: 600 }}>View Only</Tag>}
                     </div>
                 }
                 footer={null}
@@ -183,6 +197,16 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                 placement="right"
             >
                 <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                    {isIssuer && (
+                        <Alert
+                            type="info"
+                            showIcon
+                            message="View-Only Mode"
+                            description="Strictly for role Indenter only. Issuers can view drug details and quotas, but cannot create indents."
+                            style={{ borderRadius: 8 }}
+                        />
+                    )}
+
                     {/* Drug Info */}
                     <div style={{ textAlign: 'center' }}>
                         <Title level={4} style={{ marginBottom: 4 }}>
@@ -263,6 +287,7 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                                         min={0}
                                         size="large"
                                         inputMode="numeric"
+                                        disabled={isIssuer}
                                     />
                                 </div>
                             </Col>
@@ -322,10 +347,10 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                             name="quantity"
                             label="Indent Quantity"
                             rules={[
-                                { required: true, message: 'Please enter indent quantity' },
+                                { required: !isIssuer, message: 'Please enter indent quantity' },
                                 {
                                     validator: (_, value) => {
-                                        if (value && value < 1) {
+                                        if (!isIssuer && value && value < 1) {
                                             return Promise.reject(new Error('Quantity must be at least 1'));
                                         }
                                         return Promise.resolve();
@@ -335,13 +360,14 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                         >
                             <InputNumber
                                 ref={quantityInputRef}
-                                autoFocus
+                                autoFocus={!isIssuer}
                                 style={{ width: '100%' }}
-                                placeholder="Enter quantity"
+                                placeholder={isIssuer ? "N/A (Issuer view only)" : "Enter quantity"}
                                 min={0}
                                 size="large"
                                 inputMode="numeric"
                                 onChange={handleQuantityChange}
+                                disabled={isIssuer}
                             />
                         </Form.Item>
 
@@ -349,16 +375,31 @@ const IndentModal = ({ drug, visible, onClose, onSuccess, onDrugUpdate, width = 
                             name="remarks"
                             label="Remarks"
                         >
-                            <Input.TextArea placeholder="Enter remarks (optional)" rows={2} />
+                            <Input.TextArea
+                                placeholder={isIssuer ? "Remarks disabled for Issuer" : "Enter remarks (optional)"}
+                                rows={2}
+                                disabled={isIssuer}
+                            />
                         </Form.Item>
 
                         <Form.Item style={{ marginBottom: 0 }}>
                             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-
-                                <Button onClick={handleClose}>Cancel</Button>
-                                <Button type="primary" htmlType="submit" loading={loading}>
-                                    Add to Cart
+                                <Button onClick={handleClose}>
+                                    {isIssuer ? 'Close' : 'Cancel'}
                                 </Button>
+                                {isIssuer ? (
+                                    <Tooltip title="Strictly for role Indenter only. Issuers are able to view only but not create any indent.">
+                                        <span>
+                                            <Button type="primary" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
+                                                Add to Cart
+                                            </Button>
+                                        </span>
+                                    </Tooltip>
+                                ) : (
+                                    <Button type="primary" htmlType="submit" loading={loading}>
+                                        Add to Cart
+                                    </Button>
+                                )}
                             </Space>
                         </Form.Item>
                     </Form>

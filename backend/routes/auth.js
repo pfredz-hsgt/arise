@@ -92,7 +92,19 @@ router.post('/login', async (req, res) => {
             [user.id, 'LOGIN_SUCCESS', JSON.stringify({ email, message: 'User logged in successfully' })]
         );
 
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name, main_unit: user.main_unit }, requiresPasswordChange });
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                phis_username: user.phis_username,
+                phis_password: user.phis_password ? decrypt(user.phis_password) : user.phis_password,
+                main_unit: user.main_unit
+            },
+            requiresPasswordChange
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -184,13 +196,43 @@ router.post('/change-password', authenticateToken, async (req, res) => {
 router.put('/profile', authenticateToken, async (req, res) => {
     const { name, email, phis_username, phis_password } = req.body;
     try {
-        // We update name and email if provided, and always update phis_username/phis_password (even if empty string)
-        // using COALESCE for name and email, but direct assignment for phis fields to allow clearing them.
-        const encryptedPhisPassword = phis_password ? encrypt(phis_password) : (phis_password === '' ? '' : null);
-        const result = await pool.query(
-            'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email), phis_username = $3, phis_password = $4 WHERE id = $5 RETURNING id, email, name, role, phis_username, phis_password, main_unit',
-            [name, email, encryptedPhisPassword, req.user.id]
-        );
+        const updates = [];
+        const params = [];
+        let paramIndex = 1;
+
+        if (name !== undefined) {
+            updates.push(`name = $${paramIndex++}`);
+            params.push(name ? name.trim() : null);
+        }
+        if (email !== undefined) {
+            updates.push(`email = $${paramIndex++}`);
+            params.push(email ? email.trim().toLowerCase() : null);
+        }
+        if (phis_username !== undefined) {
+            updates.push(`phis_username = $${paramIndex++}`);
+            params.push(phis_username ? phis_username.trim() : null);
+        }
+        if (phis_password !== undefined) {
+            updates.push(`phis_password = $${paramIndex++}`);
+            const encryptedPhisPassword = phis_password ? encrypt(phis_password) : null;
+            params.push(encryptedPhisPassword);
+        }
+
+        if (updates.length === 0) {
+            const result = await pool.query(
+                'SELECT id, email, name, role, phis_username, phis_password, main_unit FROM users WHERE id = $1',
+                [req.user.id]
+            );
+            const user = result.rows[0];
+            if (user && user.phis_password) {
+                user.phis_password = decrypt(user.phis_password);
+            }
+            return res.json({ success: true, user });
+        }
+
+        params.push(req.user.id);
+        const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING id, email, name, role, phis_username, phis_password, main_unit`;
+        const result = await pool.query(query, params);
         const user = result.rows[0];
         if (user && user.phis_password) {
             user.phis_password = decrypt(user.phis_password);

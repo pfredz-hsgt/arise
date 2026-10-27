@@ -22,7 +22,8 @@ import {
     PlusOutlined,
     CloseOutlined,
     PlayCircleOutlined,
-    MessageOutlined
+    MessageOutlined,
+    CloseCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ShortExpModal from '../../components/ShortExpModal';
@@ -33,6 +34,8 @@ const RoutineSummaryMobileView = ({
     indentItems,
     loading,
     submitting,
+    cancelling = false,
+    cancelIndent,
     editingItem,
     setEditingItem,
     editMaxQty,
@@ -58,6 +61,20 @@ const RoutineSummaryMobileView = ({
 }) => {
     const [filterTab, setFilterTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
+
+    const handleConfirmCancel = () => {
+        Dialog.confirm({
+            title: 'Cancel Routine Indent?',
+            content: `Are you sure you want to cancel this indent session for Rak ${sessionData?.rak}? All progress for this shelf will be cleared and discarded.`,
+            confirmText: 'Cancel Indent',
+            cancelText: 'Keep Auditing',
+            onConfirm: async () => {
+                if (cancelIndent) {
+                    await cancelIndent();
+                }
+            }
+        });
+    };
 
     // Filter items based on active tab and search query
     const filteredItems = useMemo(() => {
@@ -130,22 +147,44 @@ const RoutineSummaryMobileView = ({
                     backArrow={<LeftOutlined style={{ fontSize: 16 }} />}
                     onBack={() => navigate('/home')}
                     right={
-                        <Button
-                            size="small"
-                            shape="rounded"
-                            color="primary"
-                            fill="outline"
-                            onClick={handleResume}
-                            style={{
-                                fontWeight: 600,
-                                fontSize: 12,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4
-                            }}
-                        >
-                            <PlayCircleOutlined /> Resume
-                        </Button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Button
+                                size="small"
+                                shape="rounded"
+                                color="danger"
+                                fill="outline"
+                                onClick={handleConfirmCancel}
+                                loading={cancelling}
+                                style={{
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    borderColor: '#fca5a5',
+                                    color: '#dc2626',
+                                    background: '#fff5f5'
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                size="small"
+                                shape="rounded"
+                                color="primary"
+                                fill="outline"
+                                onClick={handleResume}
+                                style={{
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 4
+                                }}
+                            >
+                                <PlayCircleOutlined /> Resume
+                            </Button>
+                        </div>
                     }
                 >
                     <span style={{ fontWeight: 700, fontSize: 16 }}>
@@ -439,24 +478,47 @@ const RoutineSummaryMobileView = ({
                 padding: '10px 14px'
             }}>
                 <SafeArea position="bottom" />
-                <Button
-                    size="large"
-                    shape="rounded"
-                    color="primary"
-                    loading={submitting}
-                    onClick={handleConfirmSend}
-                    style={{
-                        width: '100%',
-                        fontWeight: 600,
-                        fontSize: 16,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8
-                    }}
-                >
-                    <SendOutlined /> Confirm & Submit ({indentedCount} Items)
-                </Button>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <Button
+                        size="large"
+                        shape="rounded"
+                        color="danger"
+                        fill="outline"
+                        loading={cancelling}
+                        onClick={handleConfirmCancel}
+                        style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                            borderColor: '#fca5a5',
+                            color: '#dc2626',
+                            background: '#fff5f5',
+                            padding: '0 14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4
+                        }}
+                    >
+                        <CloseCircleOutlined style={{ fontSize: 14 }} /> Cancel
+                    </Button>
+                    <Button
+                        size="large"
+                        shape="rounded"
+                        color="primary"
+                        loading={submitting}
+                        onClick={handleConfirmSend}
+                        style={{
+                            flex: 1,
+                            fontWeight: 600,
+                            fontSize: 15,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6
+                        }}
+                    >
+                        <SendOutlined /> Confirm & Submit ({indentedCount} Items)
+                    </Button>
+                </div>
             </div>
 
             {/* Item Edit Bottom Sheet Popup */}
@@ -794,7 +856,7 @@ const RoutineSummaryMobileView = ({
                             </div>
                             <TextArea
                                 rows={2}
-                                placeholder="E.g. quota increased, new regimen, loan to ward..."
+                                placeholder=""
                                 value={editRemarks}
                                 onChange={setEditRemarks}
                                 showCount

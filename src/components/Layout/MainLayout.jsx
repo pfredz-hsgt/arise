@@ -34,22 +34,22 @@ const SIDER_WIDTH = 224;
 // Resolves human-friendly category and title for header breadcrumb
 const getPageMeta = (pathname) => {
     if (pathname === '/home' || pathname === '/') {
-        return { category: 'Dashboard', title: 'System Overview' };
+        return { category: 'Dashboard', title: 'Home View' };
     }
     if (pathname.startsWith('/routine-summary') || pathname.startsWith('/routine-indent')) {
-        return { category: 'Workflows', title: 'Routine Shelf Indent' };
+        return { category: 'Indent', title: 'Routine Indent Page' };
     }
     if (pathname === '/indent') {
-        return { category: 'Workflows', title: 'Urgent / Ad-Hoc Indent' };
+        return { category: 'Indent', title: 'Urgent Indent Page' };
     }
     if (pathname === '/cart') {
-        return { category: 'Supply Chain', title: 'Indent Cart & Dispatch' };
+        return { category: 'Cart', title: 'Indent Cart & Approval' };
     }
     if (pathname === '/indent-list') {
-        return { category: 'Records', title: 'Indent History & Audit' };
+        return { category: 'Records', title: 'View Previous Indent History' };
     }
     if (pathname === '/shortexp') {
-        return { category: 'Surveillance', title: 'Short Expiry Surveillance' };
+        return { category: 'Surveillance', title: 'Short Expiry Report' };
     }
     if (pathname === '/shortexp-entry') {
         return { category: 'Surveillance', title: 'Short Expiry Entry' };
@@ -58,9 +58,9 @@ const getPageMeta = (pathname) => {
         return { category: 'Surveillance', title: 'Short Expiry Archive' };
     }
     if (pathname === '/admin') {
-        return { category: 'Administration', title: 'System Admin Panel' };
+        return { category: 'Admin', title: 'Administrator Panel' };
     }
-    return { category: 'ARISE', title: 'Inventory Engine' };
+    return { category: 'Menu', title: 'Inventory Management' };
 };
 
 // Generates two-letter initials for user avatar
@@ -76,7 +76,6 @@ const BrandHeader = () => (
     <div style={{
         padding: '24px 18px 18px',
         textAlign: 'center',
-        background: 'radial-gradient(ellipse at top, rgba(2, 132, 199, 0.15) 0%, rgba(7, 13, 30, 0) 70%)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
         position: 'relative'
     }}>
@@ -84,22 +83,17 @@ const BrandHeader = () => (
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 58,
-            height: 58,
-            borderRadius: 14,
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.09)',
-            boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
-            marginBottom: 10
+            width: 68,
+            height: 68,
+            marginBottom: 0
         }}>
             <img
                 src={logo}
                 alt="ARISE Logo"
                 style={{
-                    width: 40,
-                    height: 40,
+                    width: 60,
+                    height: 60,
                     objectFit: 'contain',
-                    filter: 'drop-shadow(0 4px 10px rgba(2, 132, 199, 0.35))'
                 }}
             />
         </div>
@@ -208,7 +202,7 @@ const MainLayout = () => {
             if (values.newPassword) {
                 await changePassword(values.newPassword);
             }
-            if (!isForcedChange || values.name || values.email || values.phis_username || values.phis_password) {
+            if (!isForcedChange || values.name || values.email || values.phis_username !== undefined || values.phis_password !== undefined) {
                 await updateProfile({
                     name: values.name,
                     email: values.email,
@@ -229,10 +223,12 @@ const MainLayout = () => {
 
     const openProfileModal = () => {
         profileForm.setFieldsValue({
-            name: user?.name,
-            email: user?.email,
-            phis_username: user?.phis_username,
-            phis_password: user?.phis_password
+            name: profile?.name || user?.name || '',
+            email: profile?.email || user?.email || '',
+            phis_username: profile?.phis_username || user?.phis_username || '',
+            phis_password: profile?.phis_password || user?.phis_password || '',
+            newPassword: '',
+            confirmPassword: ''
         });
         setProfileModalVisible(true);
     };
@@ -240,6 +236,7 @@ const MainLayout = () => {
     const currentUnit = profile?.main_unit || user?.main_unit;
     const pageMeta = useMemo(() => getPageMeta(location.pathname), [location.pathname]);
     const isHomePage = location.pathname === '/home' || location.pathname === '/';
+    const isCanvasPage = isHomePage || location.pathname === '/cart' || location.pathname === '/indent' || location.pathname.startsWith('/routine') || location.pathname.startsWith('/shortexp') || location.pathname === '/admin' || location.pathname === '/indent-list';
     const todayFormatted = useMemo(() => dayjs().format('ddd, D MMM YYYY'), []);
 
     const userMenu = {
@@ -317,7 +314,7 @@ const MainLayout = () => {
             {
                 key: 'editProfile',
                 icon: <User size={15} color="#0284c7" />,
-                label: <span style={{ fontWeight: 500, fontSize: '13px' }}>Edit Profile & Password</span>,
+                label: <span style={{ fontWeight: 500, fontSize: '13px' }}>Edit Profile</span>,
                 onClick: openProfileModal
             },
             { type: 'divider' },
@@ -336,7 +333,7 @@ const MainLayout = () => {
             {
                 key: '/home',
                 icon: <LayoutDashboard size={17} strokeWidth={2.2} />,
-                label: 'Home Overview',
+                label: 'Home',
             },
             {
                 type: 'divider',
@@ -355,15 +352,15 @@ const MainLayout = () => {
                 icon: <Zap size={17} strokeWidth={2.2} />,
                 label: 'Urgent Indent',
             },
+            {
+                key: '/cart',
+                icon: <ShoppingCart size={17} strokeWidth={2.2} />,
+                label: isIssuer ? 'Indent Cart' : 'My Cart',
+            },
         ];
 
         if (isIssuer) {
             items.push(
-                {
-                    key: '/cart',
-                    icon: <ShoppingCart size={17} strokeWidth={2.2} />,
-                    label: 'Indent Cart',
-                },
                 {
                     key: '/admin',
                     icon: <ShieldCheck size={17} strokeWidth={2.2} />,
@@ -422,11 +419,11 @@ const MainLayout = () => {
             title: 'Urgent',
             icon: <Zap size={19} strokeWidth={2.2} />,
         },
-        ...(isIssuer ? [{
+        {
             key: '/cart',
             title: 'Cart',
             icon: <ShoppingCart size={19} strokeWidth={2.2} />,
-        }] : []),
+        },
         {
             key: '/shortexp',
             title: 'Short Exp',
@@ -437,7 +434,7 @@ const MainLayout = () => {
             title: 'Records',
             icon: <History size={19} strokeWidth={2.2} />,
         },
-    ], [isIssuer]);
+    ], []);
 
     const getActiveMobileTab = (pathname) => {
         if (pathname === '/home' || pathname === '/') return '/home';
@@ -700,12 +697,12 @@ const MainLayout = () => {
                     className="site-content"
                     style={{
                         margin: 0,
-                        padding: isMobile ? 0 : (isHomePage ? '16px 24px 36px' : '20px 24px 36px'),
+                        padding: isMobile ? 0 : (isCanvasPage ? '16px 24px 36px' : '20px 24px 36px'),
                         minWidth: 0,
                         background: '#f8fafc'
                     }}
                 >
-                    {isHomePage || isMobile ? (
+                    {isCanvasPage || isMobile ? (
                         <Outlet />
                     ) : (
                         <div style={{

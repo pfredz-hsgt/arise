@@ -77,4 +77,21 @@ router.delete('/drafts/cleanup', authenticateToken, async (req, res) => {
     }
 });
 
+// Delete single session (e.g. Cancel Indent)
+router.delete('/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'DELETE FROM indent_sessions WHERE id = $1 AND (user_id = $2 OR $3 = \'Admin\') RETURNING id',
+            [id, req.user.id, req.user.role]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Session not found or unauthorized' });
+        }
+        res.json({ success: true, message: 'Session cancelled and deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 export default router;

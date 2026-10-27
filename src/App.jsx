@@ -81,8 +81,8 @@ function App() {
                         <Route path="shortexp-entry" element={<ShortExpEntry />} />
                         <Route path="shortexp-archive" element={<ShortExpArchive />} />
 
-                        {/* Issuer Only Routes */}
-                        <Route path="cart" element={<ProtectedRoute requireIssuer={true}><CartPage /></ProtectedRoute>} />
+                        {/* Indent Cart - Accessible to Issuer and Indenter */}
+                        <Route path="cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
                         <Route path="indent-list" element={<ProtectedRoute><IndentRecordPage /></ProtectedRoute>} />
                         <Route path="admin" element={<ProtectedRoute requireIssuer={true}><AdminMenuPage /></ProtectedRoute>} />
                     </Route>

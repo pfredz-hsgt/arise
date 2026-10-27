@@ -240,6 +240,28 @@ export const useRoutineIndent = () => {
         handleBalanceChange(nextVal);
     };
 
+    const [cancelling, setCancelling] = useState(false);
+
+    const cancelIndent = useCallback(async () => {
+        setCancelling(true);
+        try {
+            if (sessionId) {
+                await api.delete(`/indent_sessions/${sessionId}`);
+            } else {
+                await api.delete('/indent_sessions/drafts/cleanup?session_type=Routine');
+            }
+            message.success('Routine indent session cancelled and cleared.');
+            navigate('/home');
+            return true;
+        } catch (error) {
+            console.error('Failed to cancel indent session:', error);
+            message.error('Failed to cancel indent session.');
+            return false;
+        } finally {
+            setCancelling(false);
+        }
+    }, [sessionId, navigate]);
+
     const currentItem = items[currentIndex] || null;
     const progressPercent = items.length > 0 ? Math.round(((currentIndex + 1) / items.length) * 100) : 0;
 
@@ -252,6 +274,7 @@ export const useRoutineIndent = () => {
         loading,
         saving,
         loadingItem,
+        cancelling,
         sessionId,
         currentMaxQty,
         setCurrentMaxQty,
@@ -272,6 +295,7 @@ export const useRoutineIndent = () => {
         handleNext,
         handlePrevious,
         saveCurrentData,
+        cancelIndent,
         navigate
     };
 };

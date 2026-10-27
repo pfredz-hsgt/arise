@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { message, Modal } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
@@ -197,8 +197,16 @@ export const useRoutineSummary = () => {
     const handleSend = () => {
         confirm({
             title: 'Send this indent to Substore?',
-            icon: ExclamationCircleOutlined,
+            icon: React.createElement(ExclamationCircleOutlined, { style: { color: '#0284c7' } }),
             content: 'Once sent you won\'t be able to edit anymore.',
+            okText: 'Yes, Submit Indent',
+            cancelText: 'Cancel',
+            okButtonProps: {
+                style: { borderRadius: 8, background: '#0284c7', borderColor: '#0284c7', fontWeight: 600 }
+            },
+            cancelButtonProps: {
+                style: { borderRadius: 8 }
+            },
             onOk() {
                 submitIndent();
             },
@@ -244,6 +252,28 @@ export const useRoutineSummary = () => {
         setEditQty(prev => Math.max(0, (Number(prev) || 0) + delta));
     };
 
+    const [cancelling, setCancelling] = useState(false);
+
+    const cancelIndent = useCallback(async () => {
+        setCancelling(true);
+        try {
+            if (sessionData?.id) {
+                await api.delete(`/indent_sessions/${sessionData.id}`);
+            } else {
+                await api.delete('/indent_sessions/drafts/cleanup?session_type=Routine');
+            }
+            message.success('Routine indent session cancelled and cleared.');
+            navigate('/home');
+            return true;
+        } catch (error) {
+            console.error('Failed to cancel indent session:', error);
+            message.error('Failed to cancel indent session.');
+            return false;
+        } finally {
+            setCancelling(false);
+        }
+    }, [sessionData, navigate]);
+
     const lastItemIndex = sessionData?.last_item
         ? indentItems.findIndex(i => i.item_id === sessionData.last_item)
         : -1;
@@ -262,6 +292,7 @@ export const useRoutineSummary = () => {
         setIndentItems,
         loading,
         submitting,
+        cancelling,
         viewMode,
         setViewMode,
         editingItem,
@@ -285,6 +316,7 @@ export const useRoutineSummary = () => {
         handleSend,
         submitIndent,
         handleResume,
+        cancelIndent,
         setEditBalanceQuick,
         adjustEditBalance,
         adjustEditQty,

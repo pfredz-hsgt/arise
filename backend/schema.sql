@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS main_unit (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Table: users
+-- Table: users // Main Role are "Indenter" and "Issuer" also as admin
 CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS std_kts (
 );
 
 -- Table: inventory_items
--- Master list of all drugs in the pharmacy
+-- Master list of all drugs in the pharmacy for all units
 CREATE TABLE IF NOT EXISTS inventory_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
 );
 
 -- Table: indent_sessions
+-- For Routine Indent, each user will only have 1 active session at a time, for a single Rak
 CREATE TABLE IF NOT EXISTS indent_sessions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -96,7 +97,7 @@ CREATE TABLE IF NOT EXISTS indent_sessions (
 );
 
 -- Table: indent_items
--- (Stores Routine Indent Items)
+-- For Routine Indent, each items will be tied to a session, there can be multiple items tied to a single session
 CREATE TABLE IF NOT EXISTS indent_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   session_id UUID REFERENCES indent_sessions(id) ON DELETE CASCADE,
@@ -109,20 +110,22 @@ CREATE TABLE IF NOT EXISTS indent_items (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Table: indent_requests (Ad-Hoc Requests & Cart Items)
--- Stores cart items and finalized orders
+-- Table: indent_requests (for Urgent Indent)
 CREATE TABLE IF NOT EXISTS indent_requests (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   item_id UUID REFERENCES inventory_items(id) ON DELETE CASCADE,
   requested_qty TEXT NOT NULL,
   indent_remarks TEXT,
-  status TEXT DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Completed')),
+  status TEXT DEFAULT 'Draft' CHECK (status IN ('Draft', 'Pending', 'Approved', 'Completed')),
   snapshot_max_qty INTEGER,
   snapshot_balance INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- Both indent_items (Routine Indent) & indent_requests (Urgent Indent) - will make the list in Issuer Cart to be approved
+-- Only indent_requests with status 'Draft' will appear on Indenter's Cart, after user submit, status will become 'Pending' and it will appear in Issuer's Cart to be approved
+-- Routine indent will appear in Routine Summary page then after submit will appear in Issuer's Cart
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_inventory_items_name ON inventory_items(name);
@@ -173,6 +176,7 @@ CREATE TRIGGER update_indent_items_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Table: kewps6_records
+-- Records for Short Exp (Expiry Date and Quantity records)
 CREATE TABLE IF NOT EXISTS kewps6_records (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   item_id UUID REFERENCES inventory_items(id) ON DELETE CASCADE,
@@ -204,7 +208,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-
+-- For cleared/archived Short Exp Records
 CREATE TABLE IF NOT EXISTS kewps6_archive (
     id SERIAL PRIMARY KEY,
     item_id UUID REFERENCES inventory_items(id) ON DELETE CASCADE,

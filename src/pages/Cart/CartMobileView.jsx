@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     NavBar,
     Button,
@@ -21,7 +21,11 @@ import {
     DownOutlined,
     UpOutlined,
     ExclamationCircleOutlined,
-    RobotOutlined
+    RobotOutlined,
+    SendOutlined,
+    DeleteOutlined,
+    ShoppingCartOutlined,
+    ThunderboltOutlined
 } from '@ant-design/icons';
 import { message } from 'antd';
 import { getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
@@ -47,17 +51,37 @@ const CartMobileView = ({
     startPhisIndent,
     handleAbortProcess,
     handleClearSession,
+    handleSubmitSession,
+    handleDeleteItem,
     previewSingleSessionPDF,
     processPDFExport,
     toggleSessionSelect,
     toggleSelectAll,
+    isIssuer,
+    isIndenter,
+    submittingSession,
     navigate
 }) => {
     // Keep track of which session cards are expanded
     const [expandedSessions, setExpandedSessions] = useState(() => {
-        // Expand first session by default
+        // Expand first session by default if available synchronously
         return sessions.length > 0 ? [sessions[0].id] : [];
     });
+
+    const prevFirstSessionIdRef = useRef(null);
+
+    // Auto-expand the first session/entry whenever sessions load or the first session changes
+    useEffect(() => {
+        if (sessions.length > 0) {
+            const firstId = sessions[0].id;
+            if (firstId && prevFirstSessionIdRef.current !== firstId) {
+                prevFirstSessionIdRef.current = firstId;
+                setExpandedSessions(prev => (prev.includes(firstId) ? prev : [firstId, ...prev]));
+            }
+        } else {
+            prevFirstSessionIdRef.current = null;
+        }
+    }, [sessions]);
 
     // Local state for quantity editing popup
     const [localQty, setLocalQty] = useState(0);
@@ -172,57 +196,15 @@ const CartMobileView = ({
                 <NavBar
                     backArrow={<LeftOutlined style={{ fontSize: 16 }} />}
                     onBack={() => navigate('/home')}
-                    right={
-                        unit === 'OPD' ? (
-                            <span style={{ display: 'inline-flex', gap: 4 }}>
-                                <span style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    padding: '3px 7px',
-                                    background: getUnitColor('OPD'),
-                                    color: '#ffffff',
-                                    borderRadius: 12,
-                                    fontSize: 11,
-                                    fontWeight: 700
-                                }}>
-                                    OPD
-                                </span>
-                                <span style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    padding: '3px 7px',
-                                    background: getUnitColor('ED'),
-                                    color: '#ffffff',
-                                    borderRadius: 12,
-                                    fontSize: 11,
-                                    fontWeight: 700
-                                }}>
-                                    ED
-                                </span>
-                            </span>
-                        ) : (
-                            <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                padding: '3px 8px',
-                                background: getUnitColor(unit),
-                                color: '#ffffff',
-                                borderRadius: 12,
-                                fontSize: 11,
-                                fontWeight: 700
-                            }}>
-                                {unit}
-                            </span>
-                        )
-                    }
+
                 >
                     <span style={{ fontWeight: 700, fontSize: 16 }}>
-                        Issuer Cart
+                        {isIndenter ? 'My Indent Cart' : 'Issuer Cart'}
                     </span>
                 </NavBar>
 
                 {/* Mobile Department Tabs for OPD Issuer */}
-                {unit === 'OPD' && unitCounts && (
+                {!isIndenter && unit === 'OPD' && unitCounts && (
                     <div style={{
                         display: 'flex',
                         padding: '8px 12px',
@@ -256,8 +238,8 @@ const CartMobileView = ({
                     </div>
                 )}
 
-                {/* Bulk Actions & Selection Bar */}
-                {sessions.length > 0 && (
+                {/* Bulk Actions & Selection Bar for Issuer */}
+                {!isIndenter && sessions.length > 0 && (
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -324,9 +306,29 @@ const CartMobileView = ({
                         border: '1px dashed #cbd5e1',
                         color: '#94a3b8'
                     }}>
-                        <CheckCircleOutlined style={{ fontSize: 32, color: '#16a34a', marginBottom: 8 }} />
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>All clear!</div>
-                        <div style={{ fontSize: 12, marginTop: 4 }}>No submitted indents waiting for approval.</div>
+                        {isIndenter ? (
+                            <ShoppingCartOutlined style={{ fontSize: 32, color: '#0284c7', marginBottom: 8 }} />
+                        ) : (
+                            <CheckCircleOutlined style={{ fontSize: 32, color: '#16a34a', marginBottom: 8 }} />
+                        )}
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#334155' }}>
+                            {isIndenter ? 'Your cart is empty' : 'All clear!'}
+                        </div>
+                        <div style={{ fontSize: 12, marginTop: 4, marginBottom: isIndenter ? 14 : 0 }}>
+                            {isIndenter
+                                ? 'No draft urgent indents in your cart. Add items from Urgent Indent.'
+                                : 'No submitted indents waiting for approval.'}
+                        </div>
+                        {isIndenter && (
+                            <Button
+                                size="small"
+                                color="primary"
+                                onClick={() => navigate ? navigate('/indent') : (window.location.href = '/indent')}
+                                style={{ borderRadius: 8, fontWeight: 600 }}
+                            >
+                                <ThunderboltOutlined style={{ marginRight: 4 }} /> Go to Urgent Indent
+                            </Button>
+                        )}
                     </div>
                 ) : (
                     sessions.map((session) => {
@@ -404,25 +406,58 @@ const CartMobileView = ({
 
                                     {/* Action Buttons Row */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', justifyContent: 'end', marginTop: 10 }}>
-                                        <Button
-                                            size="small"
-                                            shape="rounded"
-                                            onClick={() => handleConfirmApprove(session)}
-                                            style={{
-                                                borderColor: '#86efac',
-                                                color: '#15803d',
-                                                background: '#f0fdf4',
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 4,
-                                                gridColumnStart: 2 // Forces the button into the second column (right side)
-                                            }}
-                                        >
-                                            <CheckCircleOutlined /> Approve & Clear
-                                        </Button>
+                                        {isIndenter ? (
+                                            <Button
+                                                size="large"
+                                                shape="rounded"
+                                                loading={submittingSession}
+                                                onClick={() => {
+                                                    Dialog.confirm({
+                                                        title: 'Submit Urgent Indent?',
+                                                        content: 'Are you sure? This action cannot be reversed.',
+                                                        confirmText: 'Submit',
+                                                        cancelText: 'Cancel',
+                                                        onConfirm: () => {
+                                                            handleSubmitSession(session.id);
+                                                        }
+                                                    });
+                                                }}
+                                                style={{
+                                                    borderColor: '#86efac',
+                                                    color: '#15803d',
+                                                    background: '#f0fdf4',
+                                                    fontSize: 12,
+                                                    fontWeight: 700,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: 4,
+                                                    gridColumnStart: 2
+                                                }}
+                                            >
+                                                <SendOutlined /> Submit
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="small"
+                                                shape="rounded"
+                                                onClick={() => handleConfirmApprove(session)}
+                                                style={{
+                                                    borderColor: '#86efac',
+                                                    color: '#15803d',
+                                                    background: '#f0fdf4',
+                                                    fontSize: 12,
+                                                    fontWeight: 700,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: 4,
+                                                    gridColumnStart: 2 // Forces the button into the second column (right side)
+                                                }}
+                                            >
+                                                <CheckCircleOutlined /> Approve & Clear
+                                            </Button>
+                                        )}
                                     </div>
 
 
@@ -479,20 +514,43 @@ const CartMobileView = ({
                                                     <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>
                                                         {item.inventory_items?.name}
                                                     </div>
-                                                    <span style={{
-                                                        background: (Number(item.requested_qty) || 0) === 0 ? '#f3f4f6' : '#e0e7ff', // Muted gray if 0, soft indigo if > 0
-                                                        color: (Number(item.requested_qty) || 0) === 0 ? '#9ca3af' : '#4338ca',      // Faded text if 0, dark indigo if > 0
-                                                        border: (Number(item.requested_qty) || 0) === 0 ? '1px solid #e5e7eb' : '1px solid #c7d2fe',
-                                                        borderRadius: 6,
-                                                        padding: '1px 8px',
-                                                        fontSize: 13,
-                                                        fontWeight: 500,
-                                                        flexShrink: 0
-                                                    }}>
-                                                        Qty: {Number(item.requested_qty) || 0}
-                                                    </span>
-
-
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                                        <span style={{
+                                                            background: (Number(item.requested_qty) || 0) === 0 ? '#f3f4f6' : '#e0e7ff', // Muted gray if 0, soft indigo if > 0
+                                                            color: (Number(item.requested_qty) || 0) === 0 ? '#9ca3af' : '#4338ca',      // Faded text if 0, dark indigo if > 0
+                                                            border: (Number(item.requested_qty) || 0) === 0 ? '1px solid #e5e7eb' : '1px solid #c7d2fe',
+                                                            borderRadius: 6,
+                                                            padding: '1px 8px',
+                                                            fontSize: 13,
+                                                            fontWeight: 500
+                                                        }}>
+                                                            Qty: {Number(item.requested_qty) || 0}
+                                                        </span>
+                                                        {isIndenter && item.original_req_id && (
+                                                            <div
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    Dialog.confirm({
+                                                                        title: 'Remove item?',
+                                                                        content: `Remove "${item.inventory_items?.name}" from your cart?`,
+                                                                        confirmText: 'Remove',
+                                                                        cancelText: 'Cancel',
+                                                                        onConfirm: () => handleDeleteItem(item)
+                                                                    });
+                                                                }}
+                                                                style={{
+                                                                    color: '#ef4444',
+                                                                    padding: '2px 4px',
+                                                                    fontSize: 14,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                <DeleteOutlined />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
@@ -700,11 +758,31 @@ const CartMobileView = ({
                 }}>
                     <SafeArea position="bottom" />
                     <div style={{ display: 'flex', gap: 10 }}>
+                        {isIndenter && editingItem?.original_req_id && (
+                            <Button
+                                size="large"
+                                shape="rounded"
+                                color="danger"
+                                fill="outline"
+                                onClick={() => {
+                                    Dialog.confirm({
+                                        title: 'Remove item?',
+                                        content: `Remove "${editingItem.inventory_items?.name}" from your cart?`,
+                                        confirmText: 'Remove',
+                                        cancelText: 'Cancel',
+                                        onConfirm: () => handleDeleteItem(editingItem)
+                                    });
+                                }}
+                                style={{ flex: '0 0 28%', fontWeight: 600, fontSize: 13 }}
+                            >
+                                Remove
+                            </Button>
+                        )}
                         <Button
                             size="large"
                             shape="rounded"
                             onClick={() => setEditingItem(null)}
-                            style={{ flex: '0 0 32%', fontWeight: 600, color: '#475569' }}
+                            style={{ flex: isIndenter && editingItem?.original_req_id ? '0 0 24%' : '0 0 32%', fontWeight: 600, color: '#475569' }}
                         >
                             Cancel
                         </Button>
@@ -716,7 +794,7 @@ const CartMobileView = ({
                             onClick={() => handleUpdateQuantity(Number(localQty) || 0)}
                             style={{ flex: 1, fontWeight: 700 }}
                         >
-                            Save Quantity
+                            Save
                         </Button>
                     </div>
                 </div>

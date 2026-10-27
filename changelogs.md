@@ -1,10 +1,44 @@
 # Changelog
 
+### Summary of Changes v1.1.7 - Cancel Indent Support for Routine Indent and Summary
 
+Added a dedicated **"Cancel Indent"** capability to stop, clear, and permanently discard an active Routine Indent draft session from both the step-by-step shelf audit (`RoutineIndentPage`) and the review screen (`RoutineSummaryPage`), across both desktop and mobile viewports.
+
+#### Changes Implemented:
+
+1. **Backend Session Deletion Endpoint ([`backend/routes/indent_sessions.js`](arise/backend/routes/indent_sessions.js))**:
+   - Implemented `DELETE /api/indent_sessions/:id` endpoint with user ownership verification (`WHERE id = $1 AND (user_id = $2 OR $3 = 'Admin')`).
+   - Relies on PostgreSQL's `ON DELETE CASCADE` constraint on `indent_items(session_id)` to automatically wipe all line items associated with the cancelled session.
+   - Preserves draft cleanup endpoint `DELETE /api/indent_sessions/drafts/cleanup` for batch cleanup routines.
+
+2. **Frontend Headless State & API Hooks**:
+   - **Routine Indent Hook ([`src/pages/Indent/useRoutineIndent.js`](arise/src/pages/Indent/useRoutineIndent.js))**:
+     - Added `cancelling` loading state and `cancelIndent` async function.
+     - Calls `DELETE /api/indent_sessions/:id` (with fallback to draft cleanup), displays a toast notification (`"Routine indent session cancelled and cleared."`), and navigates back to `/home`.
+   - **Routine Summary Hook ([`src/pages/Indent/useRoutineSummary.js`](arise/src/pages/Indent/useRoutineSummary.js))**:
+     - Added `cancelling` state and `cancelIndent` handler to allow discarding the draft session directly from the summary/review page before submitting to cart.
+
+3. **Desktop View Integration**:
+   - **Routine Indent Desktop ([`src/pages/Indent/RoutineIndentDesktopView.jsx`](arise/src/pages/Indent/RoutineIndentDesktopView.jsx))**:
+     - Integrated Ant Design `Modal.confirm` with danger action styling and warning iconography to prevent accidental session abandonment.
+     - Added **Cancel Indent** button in the **Top Header Card** (beside completion progress), the **Bottom Navigation Bar** (beside "Previous"), and in the **Empty Shelf State**.
+   - **Routine Summary Desktop ([`src/pages/Indent/RoutineSummaryDesktopView.jsx`](arise/src/pages/Indent/RoutineSummaryDesktopView.jsx))**:
+     - Added `Modal.confirm` safeguard.
+     - Added **Cancel Indent** button in both the **Top Action Bar** (beside "Resume Shelf Walk") and the **Bottom Sticky Action Footer** (beside "Resume Shelf Walk" and "Confirm & Send to Cart").
+
+4. **Mobile View Integration**:
+   - **Routine Indent Mobile ([`src/pages/Indent/RoutineIndentMobileView.jsx`](arise/src/pages/Indent/RoutineIndentMobileView.jsx))**:
+     - Integrated touch-native Ant Design Mobile `Dialog.confirm` prompt.
+     - Added **Cancel Indent** button in the **Sticky Top `NavBar`** (beside item counter), a dedicated button in the **Inspection Card Area**, and a return button in the **Empty Shelf State**.
+   - **Routine Summary Mobile ([`src/pages/Indent/RoutineSummaryMobileView.jsx`](arise/src/pages/Indent/RoutineSummaryMobileView.jsx))**:
+     - Added `Dialog.confirm` safeguard.
+     - Added **Cancel** button in the **Sticky Top `NavBar`** (beside "Resume") and in the **Fixed Bottom Action Bar** (beside "Confirm & Submit").
+
+---
 
 ### Hotfix 1.1.6 - Table Overlapping Sidebar Issue
 
-The issue was caused by a **state desynchronization** between Ant Design’s `<Sider>` component and the main layout’s margin in [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx):
+The issue was caused by a **state desynchronization** between Ant Design’s `<Sider>` component and the main layout’s margin in [`MainLayout.jsx`](arise/src/components/Layout/MainLayout.jsx):
 
 ```jsx
 // Before:
@@ -37,7 +71,7 @@ The issue was caused by a **state desynchronization** between Ant Design’s `<S
 
 ### Solution Applied
 
-In [`MainLayout.jsx`](file:///d:/dev/arise/src/components/Layout/MainLayout.jsx):
+In [`MainLayout.jsx`](arise/src/components/Layout/MainLayout.jsx):
 
 1. **Eliminated State-Driven Margin Conflicts**:
    Removed the brittle JS-based `marginLeft` calculation and the uncontrolled `breakpoint="lg"` / `onCollapse` from `<Sider>`.

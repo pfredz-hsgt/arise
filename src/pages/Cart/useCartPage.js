@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { message, Modal } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
@@ -14,7 +14,8 @@ import dayjs from 'dayjs';
  */
 export const useCartPage = () => {
     const navigate = useNavigate();
-    const { user, profile } = useAuth();
+    const { user, profile, isIssuer } = useAuth();
+    const isIndenter = !isIssuer;
     const unit = profile?.main_unit || user?.main_unit || 'OPD';
 
     const [loading, setLoading] = useState(true);
@@ -26,6 +27,7 @@ export const useCartPage = () => {
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [updatingQty, setUpdatingQty] = useState(false);
+    const [submittingSession, setSubmittingSession] = useState(false);
 
     // PhIS Automation State
     const [isTerminalVisible, setIsTerminalVisible] = useState(false);
@@ -90,16 +92,21 @@ export const useCartPage = () => {
                             uniqueMappedItems.set(req.item_id, {
                                 id: `req-${req.id}`,
                                 original_req_id: req.id,
+                                original_req_ids: [req.id],
                                 item_id: req.inventory_items?.id,
                                 requested_qty: parsedQty,
                                 snapshot_max_qty: req.snapshot_max_qty,
                                 snapshot_balance: req.snapshot_balance,
                                 indent_remarks: req.indent_remarks,
                                 inventory_items: req.inventory_items,
-                                created_at: req.created_at
+                                created_at: req.created_at,
+                                status: req.status
                             });
                         } else {
-                            uniqueMappedItems.get(req.item_id).requested_qty += parsedQty;
+                            const existing = uniqueMappedItems.get(req.item_id);
+                            existing.requested_qty += parsedQty;
+                            if (!existing.original_req_ids) existing.original_req_ids = [existing.original_req_id];
+                            existing.original_req_ids.push(req.id);
                         }
                     });
 
@@ -112,6 +119,7 @@ export const useCartPage = () => {
                         id: `adhoc-requests-${profileName}-${userUnit}-${index}`,
                         created_at: reqs[0].created_at,
                         session_type: 'Urgent Indent',
+                        status: reqs[0].status || (isIndenter ? 'Draft' : 'Pending'),
                         rak: null,
                         profiles: {
                             name: profileName,
@@ -121,7 +129,8 @@ export const useCartPage = () => {
                         user_main_unit: userUnit,
                         indent_items: mappedItems,
                         isAdhocRequests: true,
-                        profileName: profileName
+                        profileName: profileName,
+                        allReqIds: reqs.map(r => r.id)
                     });
                 });
             }
@@ -169,7 +178,7 @@ export const useCartPage = () => {
     const handlePhisIndentClick = (session) => {
         Modal.confirm({
             title: 'Confirm PhIS Indent',
-            icon: ExclamationCircleOutlined,
+            icon: React.createElement(ExclamationCircleOutlined),
             content: 'Are you sure you want to proceed with this PhIS Indent?',
             okText: 'Yes, Proceed',
             cancelText: 'Cancel',
@@ -316,6 +325,55 @@ export const useCartPage = () => {
         } catch (error) {
             console.error('Error clearing indent:', error);
             message.error('Failed to clear indent');
+        }
+    };
+
+    const handleSubmitSession = async (sessionId) => {
+        try {
+            setSubmittingSession(true);
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+
+            let requestIdsToSubmit = [];
+            if (session.allReqIds && session.allReqIds.length > 0) {
+                requestIdsToSubmit = session.allReqIds;
+            } else if (session.indent_items) {
+                requestIdsToSubmit = session.indent_items.flatMap(item => item.original_req_ids || [item.original_req_id]).filter(Boolean);
+            }
+
+            if (requestIdsToSubmit.length === 0) {
+                message.warning('No items found to submit.');
+                return;
+            }
+
+            await api.post('/indents/batch-update', { ids: requestIdsToSubmit, status: 'Pending' });
+            message.success('Urgent indent submitted successfully to Issuer cart for approval!');
+            fetchCartSessions();
+        } catch (error) {
+            console.error('Error submitting indent:', error);
+            message.error('Failed to submit indent: ' + (error.message || 'Unknown error'));
+        } finally {
+            setSubmittingSession(false);
+        }
+    };
+
+    const handleDeleteItem = async (item) => {
+        try {
+            const reqIds = item.original_req_ids || (item.original_req_id ? [item.original_req_id] : []);
+            if (reqIds.length > 0) {
+                for (const id of reqIds) {
+                    await api.delete(`/indents/${id}`);
+                }
+            } else if (item.id) {
+                await api.delete(`/indent_items/${item.id}`);
+            }
+            message.success('Item removed from cart');
+            setEditModalVisible(false);
+            setEditingItem(null);
+            fetchCartSessions(true);
+        } catch (error) {
+            console.error('Error removing item:', error);
+            message.error('Failed to remove item: ' + (error.message || 'Unknown error'));
         }
     };
 
@@ -575,6 +633,8 @@ export const useCartPage = () => {
         unit,
         user,
         profile,
+        isIssuer,
+        isIndenter,
         loading,
         sessions: filteredSessions,
         allSessions: sessions,
@@ -588,6 +648,7 @@ export const useCartPage = () => {
         editingItem,
         setEditingItem,
         updatingQty,
+        submittingSession,
         isTerminalVisible,
         setIsTerminalVisible,
         terminalLogs,
@@ -600,6 +661,8 @@ export const useCartPage = () => {
         startPhisIndent,
         handleAbortProcess,
         handleClearSession,
+        handleSubmitSession,
+        handleDeleteItem,
         previewSingleSessionPDF,
         processPDFExport,
         generatePDFDocument,
