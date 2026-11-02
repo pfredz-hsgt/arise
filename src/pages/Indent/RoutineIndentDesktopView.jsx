@@ -15,7 +15,7 @@ import {
     XCircle
 } from 'lucide-react';
 import ShortExpModal from '../../components/ShortExpModal';
-import { getPuchaseTypeColor, getStdKtColor, getUnitColor } from '../../lib/colorMappings';
+import { getPuchaseTypeColor, getStdKtColor, getUnitColor, getSourceColor } from '../../lib/colorMappings';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -288,6 +288,11 @@ const RoutineIndentDesktopView = ({
                         {currentItem.main_unit && (
                             <Tag color={getUnitColor(currentItem.main_unit)} style={{ margin: 0, fontSize: '11px', fontWeight: 700 }}>
                                 {currentItem.main_unit}
+                            </Tag>
+                        )}
+                        {currentItem.indent_source && (
+                            <Tag color={getSourceColor(currentItem.indent_source)} style={{ margin: 0, fontSize: '11px', fontWeight: 700 }}>
+                                {currentItem.indent_source}
                             </Tag>
                         )}
                     </div>

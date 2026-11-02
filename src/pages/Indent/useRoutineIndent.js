@@ -83,28 +83,30 @@ export const useRoutineIndent = () => {
 
             setSessionId(currentSessionId);
 
-            // 2. Fetch inventory items for this rak and unit
+            // 2. Fetch inventory items for this rak and unit (restricted to indent_source = 'OPD Substor')
             const unit = profile?.main_unit || user?.main_unit || 'OPD';
-            const invItems = await api.get(`/inventory?row=${encodeURIComponent(rak)}&main_unit=${encodeURIComponent(unit)}`);
+            const invItems = await api.get(`/inventory?row=${encodeURIComponent(rak)}&main_unit=${encodeURIComponent(unit)}&indent_source=${encodeURIComponent('OPD Substor')}`);
 
-            if (!invItems || invItems.length === 0) {
+            const filteredItems = (invItems || []).filter(i => i.indent_source === 'OPD Substor');
+
+            if (!filteredItems || filteredItems.length === 0) {
                 message.warning({ content: `No items found in Rak ${rak} for ${unit}`, key: 'no-items' });
                 navigate('/home');
                 return;
             }
 
-            setItems(invItems);
+            setItems(filteredItems);
 
             // 3. Load draft data for the specified or first item
             let startIndex = 0;
             if (resumeItemId) {
-                const foundIndex = invItems.findIndex(i => i.id === resumeItemId);
+                const foundIndex = filteredItems.findIndex(i => i.id === resumeItemId);
                 if (foundIndex !== -1) {
                     startIndex = foundIndex;
                 }
             }
             setCurrentIndex(startIndex);
-            await loadItemData(invItems[startIndex].id, currentSessionId, invItems);
+            await loadItemData(filteredItems[startIndex].id, currentSessionId, filteredItems);
 
         } catch (error) {
             console.error(error);

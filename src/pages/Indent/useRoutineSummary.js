@@ -50,15 +50,15 @@ export const useRoutineSummary = () => {
             const items = await api.get(`/indent_items?session_id=${session.id}`);
             let finalItems = items || [];
 
-            // 3. If session has a rak, fetch full inventory to fill in un-indented items as mock items
+            // 3. If session has a rak, fetch full inventory to fill in un-indented items as mock items (filtered to OPD Substor only)
             if (session.rak) {
                 const unit = profile?.main_unit || user?.main_unit || 'OPD';
-                const invItems = await api.get(`/inventory?row=${encodeURIComponent(session.rak)}&main_unit=${encodeURIComponent(unit)}`);
+                const invItems = await api.get(`/inventory?row=${encodeURIComponent(session.rak)}&main_unit=${encodeURIComponent(unit)}&indent_source=${encodeURIComponent('OPD Substor')}`);
 
                 if (invItems) {
                     const existingItemIds = new Set(finalItems.map(item => item.item_id));
                     const missingItems = invItems
-                        .filter(invItem => !existingItemIds.has(invItem.id))
+                        .filter(invItem => invItem.indent_source === 'OPD Substor' && !existingItemIds.has(invItem.id))
                         .map(invItem => ({
                             id: `mock-${invItem.id}`,
                             session_id: session.id,
